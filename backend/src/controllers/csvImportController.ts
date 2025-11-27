@@ -18,8 +18,8 @@ const storage = multer.diskStorage({
 
 const fileFilter = (req: AuthenticatedRequest, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   if (file.mimetype === 'text/csv' ||
-      file.mimetype === 'application/csv' ||
-      path.extname(file.originalname).toLowerCase() === '.csv') {
+    file.mimetype === 'application/csv' ||
+    path.extname(file.originalname).toLowerCase() === '.csv') {
     cb(null, true);
   } else {
     cb(new Error('Apenas arquivos CSV são permitidos'));
@@ -53,9 +53,15 @@ export class CSVImportController {
         return res.status(403).json(apiError);
       }
 
-      console.log('📤 Upload recebido:', req.file.originalname, req.file.filename, 'tenantId:', tenantId);
+      // Obter categoryId opcional do corpo da requisição
+      const categoryId = req.body.categoryId as string | undefined;
 
-      const result = await CSVImportService.importContacts(req.file.path, tenantId);
+      console.log('📤 Upload recebido:', req.file.originalname, req.file.filename, 'tenantId:', tenantId);
+      if (categoryId) {
+        console.log('📂 Categoria padrão selecionada:', categoryId);
+      }
+
+      const result = await CSVImportService.importContacts(req.file.path, tenantId, categoryId);
 
       if (result.success) {
         res.json({

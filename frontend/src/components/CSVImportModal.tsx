@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { ImportResult } from '../types';
+import { ImportResult, Category } from '../types';
 import { apiService } from '../services/api';
 
 interface CSVImportModalProps {
@@ -13,6 +13,24 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+
+  // Fetch categories when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchCategories();
+    }
+  }, [isOpen]);
+
+  const fetchCategories = async () => {
+    try {
+      const allCategories = await apiService.getAllCategories();
+      setCategories(allCategories);
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -36,7 +54,7 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
 
     setIsUploading(true);
     try {
-      const result = await apiService.importCSV(file);
+      const result = await apiService.importCSV(file, selectedCategoryId || undefined);
       setImportResult(result);
 
       if (result.success) {
@@ -80,6 +98,7 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
   const handleClose = () => {
     setFile(null);
     setImportResult(null);
+    setSelectedCategoryId('');
     onClose();
   };
 
@@ -108,106 +127,129 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
           </div>
 
           <div className="space-y-4">
-          {/* Template Download */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-blue-900 text-sm">Template CSV</h3>
-                <p className="text-xs text-blue-700 mt-1">
-                  Baixe o template com o formato correto
-                </p>
-              </div>
-              <button
-                onClick={handleDownloadTemplate}
-                className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2"
-                style={{ backgroundColor: 'var(--astra-dark-blue)' }}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Baixar
-              </button>
-            </div>
-          </div>
-
-          {/* File Upload */}
-          <div>
-            <label htmlFor="csv-file" className="block text-sm font-medium text-gray-700 mb-2">
-              Selecionar arquivo CSV
-            </label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
-              <input
-                id="csv-file"
-                type="file"
-                accept=".csv,text/csv"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <label htmlFor="csv-file" className="cursor-pointer">
-                <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                <p className="text-sm text-gray-600 font-medium">Clique para selecionar</p>
-                <p className="text-xs text-gray-400 mt-1">Formato: .csv</p>
-              </label>
-            </div>
-            {file && (
-              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-xs text-green-700 font-medium truncate">
-                    {file.name}
+            {/* Template Download */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-blue-900 text-sm">Template CSV</h3>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Baixe o template com o formato correto
                   </p>
                 </div>
+                <button
+                  onClick={handleDownloadTemplate}
+                  className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2"
+                  style={{ backgroundColor: 'var(--astra-dark-blue)' }}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Baixar
+                </button>
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Import Instructions */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-            <h3 className="font-medium text-gray-900 text-sm mb-2">ℹ️ Instruções</h3>
-            <ul className="text-xs text-gray-600 space-y-1">
-              <li>• Colunas obrigatórias: <strong>nome</strong> e <strong>telefone</strong></li>
-              <li>• Opcionais: email, observacoes, categoriaId</li>
-              <li>• Use o template como referência</li>
-            </ul>
-          </div>
-
-          {/* Import Result */}
-          {importResult && (
-            <div className={`border rounded-lg p-4 ${importResult.success ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
-              <h3 className={`font-medium text-sm mb-3 ${importResult.success ? 'text-green-900' : 'text-yellow-900'}`}>
-                {importResult.success ? '✅' : '⚠️'} Resultado da Importação
-              </h3>
-              <div className="grid grid-cols-3 gap-2 mb-3">
-                <div className="bg-white rounded p-2 text-center">
-                  <div className="text-lg font-bold text-gray-900">{importResult.totalRows}</div>
-                  <div className="text-xs text-gray-600">Total</div>
-                </div>
-                <div className="bg-white rounded p-2 text-center">
-                  <div className="text-lg font-bold text-green-600">{importResult.successfulImports}</div>
-                  <div className="text-xs text-gray-600">Sucessos</div>
-                </div>
-                <div className="bg-white rounded p-2 text-center">
-                  <div className="text-lg font-bold text-red-600">{importResult.failedImports}</div>
-                  <div className="text-xs text-gray-600">Erros</div>
-                </div>
+            {/* File Upload */}
+            <div>
+              <label htmlFor="csv-file" className="block text-sm font-medium text-gray-700 mb-2">
+                Selecionar arquivo CSV
+              </label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
+                <input
+                  id="csv-file"
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <label htmlFor="csv-file" className="cursor-pointer">
+                  <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <p className="text-sm text-gray-600 font-medium">Clique para selecionar</p>
+                  <p className="text-xs text-gray-400 mt-1">Formato: .csv</p>
+                </label>
               </div>
-
-              {importResult.errors.length > 0 && (
-                <details className="cursor-pointer">
-                  <summary className="text-xs font-medium text-red-700 hover:text-red-800">Ver erros ({importResult.errors.length})</summary>
-                  <div className="mt-2 bg-red-50 border border-red-200 rounded p-2 max-h-32 overflow-y-auto">
-                    {importResult.errors.map((error, index) => (
-                      <div key={index} className="text-xs text-red-600 py-1">{error}</div>
-                    ))}
+              {file && (
+                <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-xs text-green-700 font-medium truncate">
+                      {file.name}
+                    </p>
                   </div>
-                </details>
+                </div>
               )}
             </div>
-          )}
+
+            {/* Category Selection */}
+            <div>
+              <label htmlFor="category-select" className="block text-sm font-medium text-gray-700 mb-2">
+                Categoria Padrão (Opcional)
+              </label>
+              <select
+                id="category-select"
+                value={selectedCategoryId}
+                onChange={(e) => setSelectedCategoryId(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                <option value="">Nenhuma</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.nome}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Esta categoria será aplicada a todos os contatos importados (sobrescreve categoriaId do CSV se houver)
+              </p>
+            </div>
+
+            {/* Import Instructions */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+              <h3 className="font-medium text-gray-900 text-sm mb-2">ℹ️ Instruções</h3>
+              <ul className="text-xs text-gray-600 space-y-1">
+                <li>• Colunas obrigatórias: <strong>nome</strong> e <strong>telefone</strong></li>
+                <li>• Opcionais: email, observacoes, categoriaId</li>
+                <li>• Use o template como referência</li>
+              </ul>
+            </div>
+
+            {/* Import Result */}
+            {importResult && (
+              <div className={`border rounded-lg p-4 ${importResult.success ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+                <h3 className={`font-medium text-sm mb-3 ${importResult.success ? 'text-green-900' : 'text-yellow-900'}`}>
+                  {importResult.success ? '✅' : '⚠️'} Resultado da Importação
+                </h3>
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <div className="bg-white rounded p-2 text-center">
+                    <div className="text-lg font-bold text-gray-900">{importResult.totalRows}</div>
+                    <div className="text-xs text-gray-600">Total</div>
+                  </div>
+                  <div className="bg-white rounded p-2 text-center">
+                    <div className="text-lg font-bold text-green-600">{importResult.successfulImports}</div>
+                    <div className="text-xs text-gray-600">Sucessos</div>
+                  </div>
+                  <div className="bg-white rounded p-2 text-center">
+                    <div className="text-lg font-bold text-red-600">{importResult.failedImports}</div>
+                    <div className="text-xs text-gray-600">Erros</div>
+                  </div>
+                </div>
+
+                {importResult.errors.length > 0 && (
+                  <details className="cursor-pointer">
+                    <summary className="text-xs font-medium text-red-700 hover:text-red-800">Ver erros ({importResult.errors.length})</summary>
+                    <div className="mt-2 bg-red-50 border border-red-200 rounded p-2 max-h-32 overflow-y-auto">
+                      {importResult.errors.map((error, index) => (
+                        <div key={index} className="text-xs text-red-600 py-1">{error}</div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+              </div>
+            )}
 
           </div>
 
