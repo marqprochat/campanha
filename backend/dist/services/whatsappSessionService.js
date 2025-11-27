@@ -1,0 +1,165 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.WhatsAppSessionService = void 0;
+const client_1 = require("@prisma/client");
+const prisma = new client_1.PrismaClient();
+class WhatsAppSessionService {
+    static async getAllSessions(tenantId) {
+        console.log('📋 WhatsAppSessionService.getAllSessions - tenantId:', tenantId);
+        // Construir filtros dinâmicos
+        const where = {};
+        // Filtro por tenant (SUPERADMIN vê todos se tenantId for undefined)
+        if (tenantId) {
+            where.tenantId = tenantId;
+        }
+        const sessions = await prisma.whatsAppSession.findMany({
+            where,
+            orderBy: { atualizadoEm: 'desc' }
+        });
+        console.log('📋 WhatsAppSessionService.getAllSessions - sessões encontradas:', sessions.length);
+        return sessions.map(session => ({
+            name: session.name,
+            displayName: session.displayName || session.name,
+            status: session.status,
+            provider: session.provider,
+            config: session.config ? JSON.parse(session.config) : {},
+            me: session.meId ? {
+                id: session.meId,
+                pushName: session.mePushName || '',
+                lid: session.meLid,
+                jid: session.meJid
+            } : undefined,
+            qr: session.qr,
+            qrExpiresAt: session.qrExpiresAt,
+            assignedWorker: session.assignedWorker,
+            tenantId: session.tenantId,
+            quepasaToken: session.quepasaToken
+        }));
+    }
+    static async getSession(name, tenantId) {
+        console.log('🔍 WhatsAppSessionService.getSession - name:', name, 'tenantId:', tenantId);
+        // Construir where clause com tenant isolation
+        const where = { name };
+        // Se tenantId for fornecido, aplicar filtro de tenant
+        if (tenantId) {
+            where.tenantId = tenantId;
+        }
+        const session = await prisma.whatsAppSession.findFirst({ where });
+        if (!session) {
+            throw new Error('Sessão não encontrada');
+        }
+        console.log('✅ WhatsAppSessionService.getSession - sessão encontrada:', session.name);
+        return {
+            name: session.name,
+            displayName: session.displayName || session.name,
+            status: session.status,
+            provider: session.provider,
+            config: session.config ? JSON.parse(session.config) : {},
+            me: session.meId ? {
+                id: session.meId,
+                pushName: session.mePushName || '',
+                lid: session.meLid,
+                jid: session.meJid
+            } : undefined,
+            qr: session.qr,
+            qrExpiresAt: session.qrExpiresAt,
+            assignedWorker: session.assignedWorker,
+            tenantId: session.tenantId,
+            quepasaToken: session.quepasaToken
+        };
+    }
+    static async createOrUpdateSession(data) {
+        console.log('💾 WhatsAppSessionService.createOrUpdateSession - data:', {
+            name: data.name,
+            tenantId: data.tenantId
+        });
+        const sessionData = {
+            name: data.name,
+            displayName: data.displayName || data.name,
+            status: data.status,
+            provider: data.provider,
+            config: data.config ? JSON.stringify(data.config) : null,
+            meId: data.me?.id || null,
+            mePushName: data.me?.pushName || null,
+            meLid: data.me?.lid || null,
+            meJid: data.me?.jid || null,
+            qr: data.qr || null,
+            qrExpiresAt: data.qrExpiresAt || null,
+            assignedWorker: data.assignedWorker || null,
+            tenantId: data.tenantId || null,
+            quepasaToken: data.quepasaToken || null
+        };
+        const session = await prisma.whatsAppSession.upsert({
+            where: { name: data.name },
+            update: {
+                ...sessionData,
+                atualizadoEm: new Date()
+            },
+            create: {
+                ...sessionData,
+                criadoEm: new Date(),
+                atualizadoEm: new Date()
+            }
+        });
+        return session;
+    }
+    static async deleteSession(name, tenantId) {
+        console.log('🗑️ WhatsAppSessionService.deleteSession - name:', name, 'tenantId:', tenantId);
+        // Construir where clause com tenant isolation
+        const where = { name };
+        // Verificar se a sessão existe e pertence ao tenant (se aplicável)
+        if (tenantId) {
+            const session = await prisma.whatsAppSession.findFirst({
+                where: { name, tenantId }
+            });
+            if (!session) {
+                throw new Error('Sessão não encontrada ou não pertence ao tenant');
+            }
+        }
+        await prisma.whatsAppSession.delete({
+            where: { name }
+        });
+        console.log('✅ WhatsAppSessionService.deleteSession - sessão deletada:', name);
+    }
+    static async updateSessionStatus(name, status, additionalData, tenantId) {
+        console.log('🔄 WhatsAppSessionService.updateSessionStatus - name:', name, 'tenantId:', tenantId);
+        // Verificar se a sessão existe e pertence ao tenant (se aplicável)
+        if (tenantId) {
+            const session = await prisma.whatsAppSession.findFirst({
+                where: { name, tenantId }
+            });
+            if (!session) {
+                throw new Error('Sessão não encontrada ou não pertence ao tenant');
+            }
+        }
+        const updateData = {
+            status,
+            atualizadoEm: new Date()
+        };
+        if (additionalData?.me) {
+            updateData.meId = additionalData.me.id;
+            updateData.mePushName = additionalData.me.pushName;
+            updateData.meLid = additionalData.me.lid;
+            updateData.meJid = additionalData.me.jid;
+        }
+        if (additionalData?.qr !== undefined) {
+            updateData.qr = additionalData.qr;
+        }
+        if (additionalData?.qrExpiresAt !== undefined) {
+            updateData.qrExpiresAt = additionalData.qrExpiresAt;
+        }
+        if (additionalData?.assignedWorker !== undefined) {
+            updateData.assignedWorker = additionalData.assignedWorker;
+        }
+        if (additionalData?.tenantId !== undefined) {
+            updateData.tenantId = additionalData.tenantId;
+        }
+        await prisma.whatsAppSession.update({
+            where: { name },
+            data: updateData
+        });
+        console.log('✅ WhatsAppSessionService.updateSessionStatus - status atualizado:', name);
+    }
+}
+exports.WhatsAppSessionService = WhatsAppSessionService;
+//# sourceMappingURL=whatsappSessionService.js.map

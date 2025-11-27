@@ -1,0 +1,1 @@
+{"version":3,"file":"chatwootController.d.ts","sourceRoot":"","sources":["../../src/controllers/chatwootController.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,QAAQ,EAAE,MAAM,SAAS,CAAC;AACnC,OAAO,EAAE,oBAAoB,EAAE,MAAM,oBAAoB,CAAC;AAK1D,eAAO,MAAM,eAAe,GAAU,KAAK,oBAAoB,EAAE,KAAK,QAAQ,4DAyB7E,CAAC;AAEF,eAAO,MAAM,oBAAoB,GAAU,KAAK,oBAAoB,EAAE,KAAK,QAAQ,4DAsBlF,CAAC"}

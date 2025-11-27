@@ -144,7 +144,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       }
     });
   } catch (error) {
-    console.error('Erro no login:', error);
+    console.error('❌ Erro no login:', error instanceof Error ? error.message : error);
+    console.error('📋 Stack:', error instanceof Error ? error.stack : 'Sem stack');
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'
