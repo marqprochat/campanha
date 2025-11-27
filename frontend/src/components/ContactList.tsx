@@ -11,6 +11,7 @@ interface ContactListProps {
   onToggleSelect?: (id: string) => void;
   onSelectAll?: () => void;
   selectionMode?: boolean;
+  hideContactInfo?: boolean;
 }
 
 export function ContactList({
@@ -22,6 +23,7 @@ export function ContactList({
   onToggleSelect,
   onSelectAll,
   selectionMode = false,
+  hideContactInfo = false,
 }: ContactListProps) {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
@@ -118,12 +120,12 @@ export function ContactList({
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   {contact.nome}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {formatPhoneNumber(contact.telefone)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {contact.email || '-'}
-              </td>
+                <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-500 relative ${hideContactInfo ? 'blur-sm' : ''}`}>
+                  {formatPhoneNumber(contact.telefone)}
+                </td>
+                <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-500 relative ${hideContactInfo ? 'blur-sm' : ''}`}>
+                  {contact.email || '-'}
+                </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {contact.categoria ? (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{ color: 'var(--astra-dark-blue)', backgroundColor: 'rgba(30, 58, 95, 0.1)' }}>

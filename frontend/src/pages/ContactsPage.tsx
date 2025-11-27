@@ -23,6 +23,7 @@ export function ContactsPage() {
   const [isChatwootSyncModalOpen, setIsChatwootSyncModalOpen] = useState(false);
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isHidingContactInfo, setIsHidingContactInfo] = useState(true);
 
   const pageSize = 30;
 
@@ -243,12 +244,25 @@ export function ContactsPage() {
 
         {contacts.length > 0 && (
           <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={handleSelectAllContacts}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium underline"
-            >
-              {selectedContactIds.length === contacts.length ? 'Desmarcar todos' : 'Selecionar todos'}
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleSelectAllContacts}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium underline"
+              >
+                {selectedContactIds.length === contacts.length ? 'Desmarcar todos' : 'Selecionar todos'}
+              </button>
+              <button
+                onClick={() => setIsHidingContactInfo(!isHidingContactInfo)}
+                className={`text-sm font-medium px-3 py-1 rounded-md transition-colors ${
+                  isHidingContactInfo
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'text-gray-600 hover:text-gray-700 hover:bg-gray-100'
+                }`}
+                title={isHidingContactInfo ? 'Mostrar telefone e email' : 'Ocultar telefone e email'}
+              >
+                {isHidingContactInfo ? '👁️ Mostrar' : '🔒 Ocultar'}
+              </button>
+            </div>
             {selectedContactIds.length > 0 && (
               <span className="text-sm text-gray-600">
                 {selectedContactIds.length} de {contacts.length} selecionados nesta página
@@ -267,6 +281,7 @@ export function ContactsPage() {
             onToggleSelect={handleToggleSelectContact}
             onSelectAll={handleSelectAllContacts}
             selectionMode={true}
+            hideContactInfo={isHidingContactInfo}
           />
         </div>
 

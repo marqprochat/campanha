@@ -62,12 +62,13 @@ export function CampaignsPage() {
   const [currentReportCampaignId, setCurrentReportCampaignId] = useState<string | null>(null);
   const [reportCurrentPage, setReportCurrentPage] = useState(1);
   const [reportItemsPerPage] = useState(8);
+  const [isHidingReportContactInfo, setIsHidingReportContactInfo] = useState(true);
   const [campaignsCurrentPage, setCampaignsCurrentPage] = useState(1);
   const [campaignsPerPage] = useState(10);
   const [contactTags, setContactTags] = useState<ContactTag[]>([]);
   const [whatsappSessions, setWhatsappSessions] = useState<WhatsAppSession[]>([]);
-  const [uploadingFiles, setUploadingFiles] = useState<{ [key: number]: boolean }>({});
-  const [fileInfos, setFileInfos] = useState<{ [key: number]: { name: string, size: number, type: string } }>({});
+  const [uploadingFiles, setUploadingFiles] = useState<{ [key: string]: boolean }>({});
+  const [fileInfos, setFileInfos] = useState<{ [key: string]: { name: string, size: number, type: string } }>({});
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   // Form states
@@ -1305,7 +1306,7 @@ export function CampaignsPage() {
                                             if (item.content.useVariations) {
                                               // Adicionar à primeira variação vazia ou criar nova
                                               const variations = item.content.variations || [''];
-                                              let targetIndex = variations.findIndex(v => !v.trim());
+                                              let targetIndex: number = variations.findIndex((v: string) => !v.trim());
                                               if (targetIndex === -1) targetIndex = 0;
 
                                               const newSequence = currentSequence.map((seqItem, i) => {
@@ -2138,9 +2139,23 @@ export function CampaignsPage() {
                     </svg>
                     {reportLoading ? 'Atualizando...' : 'Atualizar'}
                   </button>
+                  <button
+                    onClick={() => setIsHidingReportContactInfo(!isHidingReportContactInfo)}
+                    className={`text-sm font-medium px-3 py-1 rounded-md transition-colors ${
+                      isHidingReportContactInfo
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'text-gray-600 hover:text-gray-700 hover:bg-gray-100'
+                    }`}
+                    title={isHidingReportContactInfo ? 'Mostrar telefone' : 'Ocultar telefone'}
+                  >
+                    {isHidingReportContactInfo ? '👁️ Mostrar' : '🔒 Ocultar'}
+                  </button>
                 </div>
                 <button
-                  onClick={() => setShowReportModal(false)}
+                  onClick={() => {
+                    setShowReportModal(false);
+                    setIsHidingReportContactInfo(false);
+                  }}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2288,7 +2303,7 @@ export function CampaignsPage() {
                                   {currentMessages.map((message: any) => (
                                     <tr key={message.id}>
                                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{message.contactName}</td>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{message.contactPhone}</td>
+                                      <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${isHidingReportContactInfo ? 'blur-sm' : ''}`}>{message.contactPhone}</td>
                                       <td className="px-6 py-4 whitespace-nowrap">
                                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                                           message.status === 'SENT' ? 'bg-green-100 text-green-800' :
