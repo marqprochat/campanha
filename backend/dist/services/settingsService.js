@@ -18,6 +18,7 @@ class SettingsService {
             let settings = await prisma.globalSettings.findFirst();
             // Se não existir, criar configuração padrão
             if (!settings) {
+                console.log('⚙️ GlobalSettings não encontrado, criando configuração padrão...');
                 settings = await prisma.globalSettings.create({
                     data: {
                         singleton: true,
@@ -31,12 +32,13 @@ class SettingsService {
                         faviconUrl: '/api/uploads/default_favicon.png'
                     }
                 });
+                console.log('✅ GlobalSettings criado com sucesso');
             }
             this.cachedSettings = settings;
             return settings;
         }
         catch (error) {
-            console.error('Error getting settings:', error);
+            console.error('❌ Erro ao buscar settings do banco:', error instanceof Error ? error.message : error);
             // Retornar configurações padrão se houver erro
             return {
                 wahaHost: '',
@@ -46,7 +48,7 @@ class SettingsService {
                 quepasaUrl: '',
                 quepasaLogin: '',
                 quepasaPassword: '',
-                companyName: '',
+                companyName: 'Astra Campaign',
                 logoUrl: null,
                 faviconUrl: '/api/uploads/default_favicon.png',
                 pageTitle: 'Sistema de Gestão de Contatos',

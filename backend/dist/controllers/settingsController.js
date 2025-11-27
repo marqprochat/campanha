@@ -12,9 +12,22 @@ const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const tenantSettingsService = new tenantSettingsService_1.TenantSettingsService();
 // Configuração do multer para upload de logos
+const getUploadDir = () => {
+    return process.env.NODE_ENV === 'production' ? '/app/uploads' : './uploads';
+};
 const storage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
-        const uploadDir = '/app/uploads';
+        const uploadDir = getUploadDir();
+        // Garantir que o diretório existe
+        if (!fs_1.default.existsSync(uploadDir)) {
+            try {
+                fs_1.default.mkdirSync(uploadDir, { recursive: true });
+            }
+            catch (err) {
+                console.error('Erro ao criar diretório de uploads:', err);
+                return cb(err, uploadDir);
+            }
+        }
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
@@ -223,12 +236,14 @@ exports.uploadLogo = [
             if (!req.file) {
                 return res.status(400).json({ error: 'Nenhum arquivo enviado' });
             }
+            console.log(`📸 Upload de logo iniciado: ${req.file.filename}`);
             // URL da logo (será servida estaticamente)
             const logoUrl = `/api/uploads/${req.file.filename}`;
             // Atualizar configurações com nova logo
             const settings = await settingsService_1.settingsService.updateSettings({
                 logoUrl
             });
+            console.log(`✅ Logo atualizada com sucesso: ${logoUrl}`);
             res.json({
                 message: 'Logo carregada com sucesso',
                 logoUrl,
@@ -236,7 +251,7 @@ exports.uploadLogo = [
             });
         }
         catch (error) {
-            console.error('Erro ao fazer upload da logo:', error);
+            console.error('❌ Erro ao fazer upload da logo:', error instanceof Error ? error.message : error);
             // Remover arquivo se houve erro
             if (req.file) {
                 fs_1.default.unlink(req.file.path, (err) => {
@@ -244,7 +259,7 @@ exports.uploadLogo = [
                         console.error('Erro ao remover arquivo:', err);
                 });
             }
-            res.status(500).json({ error: 'Erro interno do servidor' });
+            res.status(500).json({ error: 'Erro interno do servidor', details: error instanceof Error ? error.message : String(error) });
         }
     }
 ];
@@ -287,7 +302,7 @@ const removeFavicon = async (req, res) => {
         const settings = await settingsService_1.settingsService.getSettings();
         if (settings.faviconUrl) {
             // Remover arquivo físico
-            const filePath = path_1.default.join('/app/uploads', path_1.default.basename(settings.faviconUrl.replace('/api/uploads/', '')));
+            const filePath = path_1.default.join(getUploadDir(), path_1.default.basename(settings.faviconUrl.replace('/api/uploads/', '')));
             if (fs_1.default.existsSync(filePath)) {
                 fs_1.default.unlinkSync(filePath);
             }
@@ -313,7 +328,7 @@ const removeLogo = async (req, res) => {
         const settings = await settingsService_1.settingsService.getSettings();
         if (settings.logoUrl) {
             // Remover arquivo físico
-            const filePath = path_1.default.join('/app/uploads', path_1.default.basename(settings.logoUrl.replace('/api/uploads/', '')));
+            const filePath = path_1.default.join(getUploadDir(), path_1.default.basename(settings.logoUrl.replace('/api/uploads/', '')));
             if (fs_1.default.existsSync(filePath)) {
                 fs_1.default.unlinkSync(filePath);
             }
@@ -372,7 +387,7 @@ const removeIcon = async (req, res) => {
         const settings = await settingsService_1.settingsService.getSettings();
         if (settings.iconUrl) {
             // Remover arquivo físico
-            const filePath = path_1.default.join('/app/uploads', path_1.default.basename(settings.iconUrl.replace('/api/uploads/', '')));
+            const filePath = path_1.default.join(getUploadDir(), path_1.default.basename(settings.iconUrl.replace('/api/uploads/', '')));
             if (fs_1.default.existsSync(filePath)) {
                 fs_1.default.unlinkSync(filePath);
             }

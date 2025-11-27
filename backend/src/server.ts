@@ -41,10 +41,13 @@ const PORT = process.env.PORT || 3001;
 // Configurar para confiar no proxy (nginx/traefik) - apenas no primeiro proxy
 app.set('trust proxy', 1);
 
-// Criar diretório para uploads temporários
-const uploadDir = '/tmp/uploads';
+// Criar diretório para uploads
+const uploadDir = process.env.NODE_ENV === 'production' 
+  ? '/app/uploads' 
+  : './uploads';
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
+  console.log(`📁 Diretório de uploads criado: ${uploadDir}`);
 }
 
 // CORS configurado de forma segura
@@ -134,7 +137,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Servir uploads estaticamente (público)
-app.use('/api/uploads', express.static('/app/uploads'));
+app.use('/api/uploads', express.static(uploadDir));
 
 // Rotas protegidas (requerem autenticação)
 app.use('/api/contatos', authMiddleware, contactRoutes);

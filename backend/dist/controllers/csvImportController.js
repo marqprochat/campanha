@@ -84,8 +84,13 @@ class CSVImportController {
                 };
                 return res.status(403).json(apiError);
             }
+            // Obter categoryId opcional do corpo da requisição
+            const categoryId = req.body.categoryId;
             console.log('📤 Upload recebido:', req.file.originalname, req.file.filename, 'tenantId:', tenantId);
-            const result = await csvImportService_1.CSVImportService.importContacts(req.file.path, tenantId);
+            if (categoryId) {
+                console.log('📂 Categoria padrão selecionada:', categoryId);
+            }
+            const result = await csvImportService_1.CSVImportService.importContacts(req.file.path, tenantId, categoryId);
             if (result.success) {
                 res.json({
                     message: 'Importação concluída com sucesso',

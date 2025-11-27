@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TenantProvider } from './contexts/TenantContext';
@@ -11,6 +11,7 @@ import { CampaignsPage } from './pages/CampaignsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { UsersPage } from './pages/UsersPage';
 import { LoginPage } from './pages/LoginPage';
+import { LandingPage } from './pages/LandingPage';
 import { SuperAdminPage } from './pages/SuperAdminPage';
 import { SuperAdminDashboard } from './pages/SuperAdminDashboard';
 import { SuperAdminManagerPage } from './pages/SuperAdminManagerPage';
@@ -20,6 +21,7 @@ import './styles/globals.css';
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
   const { settings } = useGlobalSettings();
+  const location = useLocation();
 
   // Aplicar meta tags dinâmicas (título e favicon)
   useEffect(() => {
@@ -85,23 +87,20 @@ function AppContent() {
     );
   }
 
-  if (!isAuthenticated) {
-    return (
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navigation />
+      {isAuthenticated && location.pathname !== '/' && <Navigation />}
 
-      <main className="main-content flex-1 flex flex-col">
+      <main className={location.pathname === '/' ? '' : "main-content flex-1 flex flex-col"}>
         <Routes>
-          <Route path="/login" element={<Navigate to="/contatos" replace />} />
-          <Route path="/" element={<Navigate to="/contatos" replace />} />
+          {/* Public Routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route
+            path="/login"
+            element={!isAuthenticated ? <LoginPage /> : <Navigate to="/contatos" replace />}
+          />
+
+          {/* Protected Routes */}
           <Route
             path="/contatos"
             element={
@@ -166,6 +165,9 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
+
+          {/* Fallback for unknown routes */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
     </div>
@@ -221,8 +223,8 @@ function App() {
             {(t) => {
               const backgroundColor =
                 t.type === 'success' ? '#10b981' :
-                t.type === 'error' ? '#ef4444' :
-                '#1e293b';
+                  t.type === 'error' ? '#ef4444' :
+                    '#1e293b';
 
               return (
                 <div

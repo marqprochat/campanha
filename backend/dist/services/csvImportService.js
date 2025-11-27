@@ -41,7 +41,7 @@ const fs = __importStar(require("fs"));
 const csv_parser_1 = __importDefault(require("csv-parser"));
 const contactService_1 = require("./contactService");
 class CSVImportService {
-    static async importContacts(filePath, tenantId) {
+    static async importContacts(filePath, tenantId, defaultCategoryId) {
         const results = [];
         const errors = [];
         let successfulImports = 0;
@@ -56,6 +56,9 @@ class CSVImportService {
             })
                 .on('end', async () => {
                 console.log(`📊 CSVImportService - Processando ${results.length} linhas do CSV para tenantId: ${tenantId}`);
+                if (defaultCategoryId) {
+                    console.log(`📂 Categoria padrão será aplicada a todos os contatos: ${defaultCategoryId}`);
+                }
                 for (let i = 0; i < results.length; i++) {
                     const row = results[i];
                     const rowNumber = i + 2; // +2 porque CSV tem header e arrays começam em 0
@@ -71,17 +74,22 @@ class CSVImportService {
                         }
                         // Preparar dados do contato incluindo tenantId
                         const tags = row.tags ? row.tags.split(',').map((tag) => tag.trim()) : [];
+                        // Aplicar categoria padrão se fornecida, caso contrário usar a do CSV
+                        const categoryToUse = defaultCategoryId || row.categoriaid?.trim() || undefined;
                         const contactData = {
                             nome: row.nome.trim(),
                             telefone: row.telefone.trim(),
                             email: row.email?.trim() || undefined,
                             observacoes: row.observacoes?.trim() || undefined,
                             tags: tags,
-                            categoriaId: row.categoriaid?.trim() || undefined,
+                            categoriaId: categoryToUse,
                             tenantId: tenantId
                         };
                         console.log(`🏷️ Linha ${rowNumber} - Tags extraídas:`, tags);
-                        console.log(`📂 Linha ${rowNumber} - CategoriaId:`, row.categoriaid);
+                        console.log(`📂 Linha ${rowNumber} - CategoriaId aplicada:`, categoryToUse);
+                        if (defaultCategoryId && row.categoriaid) {
+                            console.log(`⚠️ Linha ${rowNumber} - Categoria do CSV (${row.categoriaid}) sobrescrita pela categoria padrão (${defaultCategoryId})`);
+                        }
                         // Criar contato
                         await contactService_1.ContactService.createContact(contactData);
                         successfulImports++;

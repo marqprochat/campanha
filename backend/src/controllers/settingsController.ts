@@ -9,11 +9,24 @@ import fs from 'fs';
 
 const tenantSettingsService = new TenantSettingsService();
 
-
 // Configuração do multer para upload de logos
+const getUploadDir = () => {
+  return process.env.NODE_ENV === 'production' ? '/app/uploads' : './uploads';
+};
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = '/app/uploads';
+    const uploadDir = getUploadDir();
+    
+    // Garantir que o diretório existe
+    if (!fs.existsSync(uploadDir)) {
+      try {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      } catch (err) {
+        console.error('Erro ao criar diretório de uploads:', err);
+        return cb(err as any, uploadDir);
+      }
+    }
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
@@ -223,6 +236,8 @@ export const uploadLogo = [
         return res.status(400).json({ error: 'Nenhum arquivo enviado' });
       }
 
+      console.log(`📸 Upload de logo iniciado: ${req.file.filename}`);
+
       // URL da logo (será servida estaticamente)
       const logoUrl = `/api/uploads/${req.file.filename}`;
 
@@ -231,13 +246,15 @@ export const uploadLogo = [
         logoUrl
       });
 
+      console.log(`✅ Logo atualizada com sucesso: ${logoUrl}`);
+
       res.json({
         message: 'Logo carregada com sucesso',
         logoUrl,
         settings
       });
     } catch (error) {
-      console.error('Erro ao fazer upload da logo:', error);
+      console.error('❌ Erro ao fazer upload da logo:', error instanceof Error ? error.message : error);
 
       // Remover arquivo se houve erro
       if (req.file) {
@@ -246,7 +263,7 @@ export const uploadLogo = [
         });
       }
 
-      res.status(500).json({ error: 'Erro interno do servidor' });
+      res.status(500).json({ error: 'Erro interno do servidor', details: error instanceof Error ? error.message : String(error) });
     }
   }
 ];
@@ -295,7 +312,7 @@ export const removeFavicon = async (req: Request, res: Response) => {
 
     if (settings.faviconUrl) {
       // Remover arquivo físico
-      const filePath = path.join('/app/uploads', path.basename(settings.faviconUrl.replace('/api/uploads/', '')));
+      const filePath = path.join(getUploadDir(), path.basename(settings.faviconUrl.replace('/api/uploads/', '')));
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
@@ -323,7 +340,7 @@ export const removeLogo = async (req: Request, res: Response) => {
 
     if (settings.logoUrl) {
       // Remover arquivo físico
-      const filePath = path.join('/app/uploads', path.basename(settings.logoUrl.replace('/api/uploads/', '')));
+      const filePath = path.join(getUploadDir(), path.basename(settings.logoUrl.replace('/api/uploads/', '')));
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
@@ -388,7 +405,7 @@ export const removeIcon = async (req: Request, res: Response) => {
 
     if (settings.iconUrl) {
       // Remover arquivo físico
-      const filePath = path.join('/app/uploads', path.basename(settings.iconUrl.replace('/api/uploads/', '')));
+      const filePath = path.join(getUploadDir(), path.basename(settings.iconUrl.replace('/api/uploads/', '')));
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
