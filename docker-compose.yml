@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=contacts
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - TZ=America/Sao_Paulo
+    volumes:
+      - postgres_data_local:/var/lib/postgresql/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data_local:/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  work_backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: work_backend
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/contacts?schema=public
+      REDIS_URL: redis://redis:6379
+      REDIS_PREFIX: work_app
+      PORT: 3001
+      NODE_ENV: production
+      JWT_SECRET: your-super-secret-jwt-key-at-least-32-characters-long-local
+      JWT_EXPIRES_IN: 24h
+      # Configurações padrão
+      DEFAULT_PAGE_TITLE: "Sistema de Gestão de Contatos"
+      ALLOWED_ORIGINS: "*"
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - contacts_data_local:/app/data
+      - uploads_data_local:/app/uploads
+      - backup_data_local:/app/backups
+    ports:
+      - "3001:3001"
+
+  work_frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: work_frontend
+    networks:
+      - app_network
+    depends_on:
+      - work_backend
+    ports:
+      - "3002:80"
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  postgres_data_local:
+  redis_data_local:
+  contacts_data_local:
+  uploads_data_local:
+  backup_data_local:
