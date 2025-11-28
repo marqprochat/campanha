@@ -88,10 +88,41 @@ export const authMiddleware = async (
       }
     }
 
+    // Para usuários ADMIN sem tenantId no JWT, buscar o primeiro tenant associado
+    if (user.role === 'ADMIN' && !decoded.tenantId) {
+      const userTenant = await prisma.userTenant.findFirst({
+        where: { userId: user.id },
+        include: {
+          tenant: {
+            select: {
+              id: true,
+              slug: true,
+              name: true,
+              active: true
+            }
+          }
+        }
+      });
+
+      if (userTenant) {
+        effectiveTenantId = userTenant.tenantId;
+        console.log(`ℹ️ Admin ${user.email} não tinha tenantId no JWT, usando tenant padrão: ${effectiveTenantId}`);
+      }
+    }
+
     // Adicionar tenantId diretamente para fácil acesso
     req.tenantId = effectiveTenantId;
 
-    // Se não é SUPERADMIN ou tem tenantId definido, buscar dados do tenant
+    // Para usuários ADMIN, tenantId é obrigatório
+    if (user.role === 'ADMIN' && !effectiveTenantId) {
+      res.status(401).json({
+        success: false,
+        message: 'Tenant não identificado. Usuário ADMIN deve estar associado a um tenant.'
+      });
+      return;
+    }
+
+    // Se tem tenantId definido, buscar dados do tenant
     if (effectiveTenantId) {
       const tenant = await prisma.tenant.findUnique({
         where: {

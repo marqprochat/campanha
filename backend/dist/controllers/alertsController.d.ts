@@ -14,9 +14,9 @@ export declare const getAlertsSummary: (req: AuthenticatedRequest, res: Response
 export declare function createSystemAlert(type: AlertType, severity: AlertSeverity, title: string, message: string, metadata?: any, tenantId?: string, userId?: string): Promise<{
     id: string;
     tenantId: string | null;
+    userId: string | null;
     createdAt: Date;
     updatedAt: Date;
-    userId: string | null;
     message: string;
     title: string;
     type: import(".prisma/client").$Enums.AlertType;

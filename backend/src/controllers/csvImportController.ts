@@ -1,14 +1,31 @@
-import { Response } from 'express';
+import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import multer from 'multer';
 import * as path from 'path';
+import * as os from 'os';
+import * as fs from 'fs';
 import { CSVImportService } from '../services/csvImportService';
 import { ApiError } from '../types';
+
+// Criar diretório temporário se não existir
+const tmpDir = path.join(process.cwd(), 'tmp', 'uploads');
+try {
+  if (!fs.existsSync(tmpDir)) {
+    fs.mkdirSync(tmpDir, { recursive: true });
+    console.log(`✅ Diretório de uploads criado: ${tmpDir}`);
+  }
+} catch (error) {
+  console.error(`❌ Erro ao criar diretório de uploads: ${tmpDir}`, error);
+}
 
 // Configurar multer para upload de arquivos
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, '/tmp/uploads'); // Usar diretório temporário
+    // Garantir que o diretório existe antes de salvar
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
+    }
+    cb(null, tmpDir); // Usar diretório temporário relativo ao projeto
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -34,6 +51,22 @@ export const upload = multer({
   }
 });
 
+// Middleware para capturar erros do multer
+export const handleMulterError = (err: any, req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  if (err instanceof multer.MulterError) {
+    console.error('❌ Erro do Multer:', err.code, err.message);
+    return res.status(400).json({
+      error: `Erro ao fazer upload: ${err.message}`
+    });
+  } else if (err) {
+    console.error('❌ Erro no upload:', err.message);
+    return res.status(400).json({
+      error: err.message || 'Erro ao fazer upload do arquivo'
+    });
+  }
+  next();
+};
+
 export class CSVImportController {
   static async importContacts(req: AuthenticatedRequest, res: Response) {
     try {
@@ -48,7 +81,7 @@ export class CSVImportController {
       const tenantId = req.tenantId;
       if (!tenantId) {
         const apiError: ApiError = {
-          error: 'Tenant não identificado'
+          error: 'Tenant não identificado. Verifique se seu usuário está associado a um tenant.'
         };
         return res.status(403).json(apiError);
       }

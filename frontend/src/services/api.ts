@@ -143,17 +143,20 @@ class ApiService {
     }
 
     const token = localStorage.getItem('auth_token');
-    const headers: HeadersInit = {};
+    const options: RequestInit = {
+      method: 'POST',
+      body: formData,
+    };
 
+    // IMPORTANTE: Não defina Content-Type explicitamente com FormData
+    // O navegador o define automaticamente como multipart/form-data
     if (token) {
-      (headers as Record<string, string>).Authorization = `Bearer ${token}`;
+      options.headers = {
+        'Authorization': `Bearer ${token}`,
+      };
     }
 
-    const response = await fetch(`${API_BASE_URL}/csv/import`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
+    const response = await fetch(`${API_BASE_URL}/csv/import`, options);
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));

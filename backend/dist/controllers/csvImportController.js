@@ -36,14 +36,30 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CSVImportController = exports.upload = void 0;
+exports.CSVImportController = exports.handleMulterError = exports.upload = void 0;
 const multer_1 = __importDefault(require("multer"));
 const path = __importStar(require("path"));
+const fs = __importStar(require("fs"));
 const csvImportService_1 = require("../services/csvImportService");
+// Criar diretório temporário se não existir
+const tmpDir = path.join(process.cwd(), 'tmp', 'uploads');
+try {
+    if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true });
+        console.log(`✅ Diretório de uploads criado: ${tmpDir}`);
+    }
+}
+catch (error) {
+    console.error(`❌ Erro ao criar diretório de uploads: ${tmpDir}`, error);
+}
 // Configurar multer para upload de arquivos
 const storage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, '/tmp/uploads'); // Usar diretório temporário
+        // Garantir que o diretório existe antes de salvar
+        if (!fs.existsSync(tmpDir)) {
+            fs.mkdirSync(tmpDir, { recursive: true });
+        }
+        cb(null, tmpDir); // Usar diretório temporário relativo ao projeto
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -67,6 +83,23 @@ exports.upload = (0, multer_1.default)({
         fileSize: 5 * 1024 * 1024 // 5MB max
     }
 });
+// Middleware para capturar erros do multer
+const handleMulterError = (err, req, res, next) => {
+    if (err instanceof multer_1.default.MulterError) {
+        console.error('❌ Erro do Multer:', err.code, err.message);
+        return res.status(400).json({
+            error: `Erro ao fazer upload: ${err.message}`
+        });
+    }
+    else if (err) {
+        console.error('❌ Erro no upload:', err.message);
+        return res.status(400).json({
+            error: err.message || 'Erro ao fazer upload do arquivo'
+        });
+    }
+    next();
+};
+exports.handleMulterError = handleMulterError;
 class CSVImportController {
     static async importContacts(req, res) {
         try {
@@ -80,7 +113,7 @@ class CSVImportController {
             const tenantId = req.tenantId;
             if (!tenantId) {
                 const apiError = {
-                    error: 'Tenant não identificado'
+                    error: 'Tenant não identificado. Verifique se seu usuário está associado a um tenant.'
                 };
                 return res.status(403).json(apiError);
             }
