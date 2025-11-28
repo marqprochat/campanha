@@ -1,85 +1,103 @@
-version: '3.8'
-
 services:
-  postgres:
+  # --------------------------------------------------------------------
+  # 1. BANCO DE DADOS COMPARTILHADO (Postgres 16)
+  # --------------------------------------------------------------------
+  shared_postgres:
     image: postgres:16-alpine
+    container_name: astra_shared_postgres
     environment:
-      - POSTGRES_DB=contacts
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=contacts
       - TZ=America/Sao_Paulo
     volumes:
-      - postgres_data_local:/var/lib/postgresql/data
+      - shared_postgres_data:/var/lib/postgresql/data
     networks:
-      - app_network
+      - astra_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: always
 
-  redis:
+  # --------------------------------------------------------------------
+  # 2. REDIS COMPARTILHADO
+  # --------------------------------------------------------------------
+  shared_redis:
     image: redis:7-alpine
+    container_name: astra_shared_redis
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
-      - redis_data_local:/data
+      - shared_redis_data:/data
     networks:
-      - app_network
+      - astra_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: always
 
-  work_backend:
+  # --------------------------------------------------------------------
+  # 4. BACKEND ASTRA
+  # --------------------------------------------------------------------
+  backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: work_backend
+    container_name: astra_backend
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/contacts?schema=public
-      REDIS_URL: redis://redis:6379
-      REDIS_PREFIX: work_app
-      PORT: 3001
-      NODE_ENV: production
-      JWT_SECRET: your-super-secret-jwt-key-at-least-32-characters-long-local
-      JWT_EXPIRES_IN: 24h
-      # Configurações padrão
-      DEFAULT_PAGE_TITLE: "Sistema de Gestão de Contatos"
-      ALLOWED_ORIGINS: "*"
+      - DOMAIN=campanha.marqsolucoes.com.br
+      - DATABASE_URL=postgresql://postgres:postgres@shared_postgres:5432/contacts?schema=public
+      - REDIS_URL=redis://shared_redis:6379
+      - JWT_SECRET=ad69ceaa62067ea1bffda708ed76ce82
+      - JWT_EXPIRES_IN=24h
+      - DEFAULT_EVOLUTION_HOST=https://evolution-api-evolution-api.nv8gf3.easypanel.host
+      - DEFAULT_EVOLUTION_API_KEY=429683C4C977415CAAFCCE10F7D57E11
+      - DEFAULT_COMPANY_NAME=MarqPro
+      - DEFAULT_PAGE_TITLE=Gerenciamento de campanha
+      - ALLOWED_ORIGINS=https://campanha.marqsolucoes.com.br
     networks:
-      - app_network
+      - astra_network
     depends_on:
-      postgres:
+      shared_postgres:
         condition: service_healthy
-      redis:
+      shared_redis:
         condition: service_healthy
     volumes:
-      - contacts_data_local:/app/data
-      - uploads_data_local:/app/uploads
-      - backup_data_local:/app/backups
+      - contacts_data:/app/data
+      - uploads_data:/app/uploads
+      - backup_data:/app/backups
     ports:
       - "3001:3001"
+    restart: always
 
-  work_frontend:
+  # --------------------------------------------------------------------
+  # 5. FRONTEND ASTRA
+  # --------------------------------------------------------------------
+  frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: work_frontend
+    container_name: astra_frontend
     networks:
-      - app_network
+      - astra_network
     depends_on:
-      - work_backend
+      - backend
     ports:
       - "3002:80"
+    restart: always
 
 networks:
-  app_network:
+  astra_network:
     driver: bridge
 
 volumes:
-  postgres_data_local:
-  redis_data_local:
-  contacts_data_local:
-  uploads_data_local:
-  backup_data_local:
+  shared_postgres_data:
+  shared_redis_data:
+  contacts_data:
+  uploads_data:
+  backup_data:
+  evolution_instances:
+  evolution_store:
