@@ -276,8 +276,8 @@ class CampaignSchedulerService {
       }
 
       // Buscar dados do contato para variáveis dinâmicas usando ContactService
-      const contactsResponse = await ContactService.getContacts();
-      const contact = contactsResponse.contacts.find((c: any) => c.id === message.contactId);
+      // Passar tenantId e page size adequado para encontrar o contato
+      const contact = await ContactService.getContactById(message.contactId, campaign.tenantId);
 
       console.log(`🔍 CONTACT FOUND:`, contact);
 
