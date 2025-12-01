@@ -19,8 +19,30 @@ export class CSVImportService {
     let successfulImports = 0;
     let failedImports = 0;
 
+    // Validar se arquivo existe
+    if (!fs.existsSync(filePath)) {
+      console.error(`❌ Arquivo CSV não encontrado: ${filePath}`);
+      return {
+        success: false,
+        totalRows: 0,
+        successfulImports: 0,
+        failedImports: 0,
+        errors: [`Arquivo não encontrado: ${filePath}`]
+      };
+    }
+
     return new Promise((resolve, reject) => {
       fs.createReadStream(filePath)
+        .on('error', (error: any) => {
+          console.error(`❌ Erro ao abrir arquivo CSV: ${filePath}`, error);
+          resolve({
+            success: false,
+            totalRows: 0,
+            successfulImports: 0,
+            failedImports: 0,
+            errors: [`Erro ao ler arquivo: ${error.message}`]
+          });
+        })
         .pipe(csvParser({
           mapHeaders: ({ header }: { header: string }) => header.toLowerCase().trim()
         }))
@@ -86,9 +108,12 @@ export class CSVImportService {
 
           // Limpar arquivo temporário
           try {
-            fs.unlinkSync(filePath);
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+              console.log(`🗑️ Arquivo temporário removido: ${filePath}`);
+            }
           } catch (error) {
-            console.warn('Erro ao limpar arquivo temporário:', error);
+            console.warn('⚠️ Erro ao limpar arquivo temporário:', error);
           }
 
           const result: ImportResult = {
@@ -103,7 +128,7 @@ export class CSVImportService {
           resolve(result);
         })
         .on('error', (error: any) => {
-          console.error('❌ Erro ao processar CSV:', error);
+          console.error('❌ Erro ao processar CSV com csv-parser:', error);
           reject(error);
         });
     });

@@ -8,14 +8,19 @@ import { CSVImportService } from '../services/csvImportService';
 import { ApiError } from '../types';
 
 // Criar diretório temporário se não existir
-const tmpDir = path.join(process.cwd(), 'tmp', 'uploads');
+// Em produção (Docker), usar /app/uploads; em desenvolvimento, usar ./uploads
+const tmpDir = process.env.NODE_ENV === 'production' 
+  ? '/app/uploads/csv-temp'
+  : path.join(process.cwd(), 'uploads', 'csv-temp');
+
 try {
   if (!fs.existsSync(tmpDir)) {
     fs.mkdirSync(tmpDir, { recursive: true });
-    console.log(`✅ Diretório de uploads criado: ${tmpDir}`);
+    console.log(`✅ Diretório de uploads CSV criado: ${tmpDir}`);
   }
 } catch (error) {
-  console.error(`❌ Erro ao criar diretório de uploads: ${tmpDir}`, error);
+  console.error(`❌ Erro ao criar diretório de uploads CSV: ${tmpDir}`, error);
+  throw new Error(`Não foi possível criar diretório temporário: ${tmpDir}`);
 }
 
 // Configurar multer para upload de arquivos
@@ -23,13 +28,22 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Garantir que o diretório existe antes de salvar
     if (!fs.existsSync(tmpDir)) {
-      fs.mkdirSync(tmpDir, { recursive: true });
+      try {
+        fs.mkdirSync(tmpDir, { recursive: true });
+        console.log(`✅ Diretório criado durante upload: ${tmpDir}`);
+      } catch (error) {
+        const errorMsg = `Não foi possível criar diretório temporário: ${error instanceof Error ? error.message : error}`;
+        console.error(`❌ ${errorMsg}`);
+        return cb(new Error(errorMsg), tmpDir);
+      }
     }
-    cb(null, tmpDir); // Usar diretório temporário relativo ao projeto
+    cb(null, tmpDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'import-' + uniqueSuffix + path.extname(file.originalname));
+    const filename = 'import-' + uniqueSuffix + path.extname(file.originalname);
+    console.log(`📄 Arquivo CSV será salvo como: ${filename}`);
+    cb(null, filename);
   }
 });
 
@@ -54,9 +68,19 @@ export const upload = multer({
 // Middleware para capturar erros do multer
 export const handleMulterError = (err: any, req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   if (err instanceof multer.MulterError) {
-    console.error('❌ Erro do Multer:', err.code, err.message);
+    console.error('❌ Erro do Multer - Código:', err.code);
+    console.error('❌ Erro do Multer - Mensagem:', err.message);
+    
+    let message = err.message;
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      message = 'Arquivo muito grande. Máximo permitido: 5MB';
+    } else if (err.code === 'LIMIT_FILE_COUNT') {
+      message = 'Apenas um arquivo é permitido por vez';
+    }
+    
     return res.status(400).json({
-      error: `Erro ao fazer upload: ${err.message}`
+      error: `Erro ao fazer upload: ${message}`,
+      code: err.code
     });
   } else if (err) {
     console.error('❌ Erro no upload:', err.message);

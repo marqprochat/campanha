@@ -2,6 +2,10 @@
 
 echo "🚀 Starting Astra Campaign Backend..."
 
+# Criar diretórios necessários
+echo "📁 Creating necessary directories..."
+mkdir -p /app/uploads /app/uploads/csv-temp /app/data /app/backups 2>/dev/null || true
+
 # Aguardar um pouco para o banco subir
 echo "⏳ Waiting for database startup..."
 sleep 20
