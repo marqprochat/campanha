@@ -7,37 +7,39 @@ import * as fs from 'fs';
 import { CSVImportService } from '../services/csvImportService';
 import { ApiError } from '../types';
 
-// Criar diretório temporário se não existir
+// Definir diretório temporário
 // Em produção (Docker), usar /app/uploads; em desenvolvimento, usar ./uploads
-const tmpDir = process.env.NODE_ENV === 'production' 
-  ? '/app/uploads/csv-temp'
-  : path.join(process.cwd(), 'uploads', 'csv-temp');
+const getTmpDir = () => {
+  return process.env.NODE_ENV === 'production' 
+    ? '/app/uploads'
+    : path.join(process.cwd(), 'uploads');
+};
 
-try {
-  if (!fs.existsSync(tmpDir)) {
-    fs.mkdirSync(tmpDir, { recursive: true });
-    console.log(`✅ Diretório de uploads CSV criado: ${tmpDir}`);
+// Função auxiliar para criar diretório de forma segura
+const ensureDirectoryExists = (dir: string): boolean => {
+  try {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`✅ Diretório criado: ${dir}`);
+    }
+    return true;
+  } catch (error) {
+    console.error(`⚠️ Erro ao criar diretório ${dir}: ${error instanceof Error ? error.message : error}`);
+    return false;
   }
-} catch (error) {
-  console.error(`❌ Erro ao criar diretório de uploads CSV: ${tmpDir}`, error);
-  throw new Error(`Não foi possível criar diretório temporário: ${tmpDir}`);
-}
+};
 
 // Configurar multer para upload de arquivos
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
+    const tmpDir = getTmpDir();
+    
     // Garantir que o diretório existe antes de salvar
-    if (!fs.existsSync(tmpDir)) {
-      try {
-        fs.mkdirSync(tmpDir, { recursive: true });
-        console.log(`✅ Diretório criado durante upload: ${tmpDir}`);
-      } catch (error) {
-        const errorMsg = `Não foi possível criar diretório temporário: ${error instanceof Error ? error.message : error}`;
-        console.error(`❌ ${errorMsg}`);
-        return cb(new Error(errorMsg), tmpDir);
-      }
+    if (ensureDirectoryExists(tmpDir)) {
+      cb(null, tmpDir);
+    } else {
+      cb(new Error(`Não foi possível acessar diretório: ${tmpDir}`), tmpDir);
     }
-    cb(null, tmpDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);

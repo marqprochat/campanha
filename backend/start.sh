@@ -2,9 +2,18 @@
 
 echo "🚀 Starting Astra Campaign Backend..."
 
-# Criar diretórios necessários
-echo "📁 Creating necessary directories..."
-mkdir -p /app/uploads /app/uploads/csv-temp /app/data /app/backups 2>/dev/null || true
+# Criar diretórios necessários com permissões corretas
+echo "📁 Creating necessary directories with correct permissions..."
+mkdir -p /app/data /app/uploads /app/backups 2>/dev/null || true
+
+# Garantir permissões (apenas se for o usuário root)
+if [ "$(id -u)" = "0" ]; then
+  chmod -R 755 /app/data /app/uploads /app/backups 2>/dev/null || true
+  chown -R nodejs:nodejs /app/data /app/uploads /app/backups 2>/dev/null || true
+  echo "✅ Permissions set"
+else
+  echo "⚠️ Running as non-root user, skipping chown"
+fi
 
 # Aguardar um pouco para o banco subir
 echo "⏳ Waiting for database startup..."
