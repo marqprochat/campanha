@@ -17,7 +17,7 @@ const getUploadDir = () => {
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = getUploadDir();
-    
+
     // Garantir que o diretório existe
     if (!fs.existsSync(uploadDir)) {
       try {
@@ -152,12 +152,14 @@ export const getSettings = async (req: AuthenticatedRequest, res: Response) => {
 // Get public settings (favicon, page title, icon and company name, no auth required)
 export const getPublicSettings = async (req: Request, res: Response) => {
   try {
-    const settings = await settingsService.getSettings();
+    const settings = await settingsService.getSettings() as any;
     res.json({
       faviconUrl: settings.faviconUrl,
       pageTitle: settings.pageTitle,
       iconUrl: settings.iconUrl,
-      companyName: settings.companyName
+      companyName: settings.companyName,
+      primaryColor: settings.primaryColor || '#21975f',
+      logoUrl: settings.logoUrl
     });
   } catch (error) {
     console.error('Erro ao buscar configurações públicas:', error);
@@ -173,7 +175,7 @@ export const updateSettings = async (req: AuthenticatedRequest, res: Response) =
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { wahaHost, wahaApiKey, evolutionHost, evolutionApiKey, quepasaUrl, quepasaLogin, quepasaPassword, companyName, pageTitle, openaiApiKey, groqApiKey, chatwootUrl, chatwootAccountId, chatwootApiToken, tenantId } = req.body;
+    const { wahaHost, wahaApiKey, evolutionHost, evolutionApiKey, quepasaUrl, quepasaLogin, quepasaPassword, companyName, pageTitle, openaiApiKey, groqApiKey, chatwootUrl, chatwootAccountId, chatwootApiToken, tenantId, primaryColor } = req.body;
 
     // Atualizar configurações globais (WAHA, Evolution, Quepasa são globais)
     const globalSettings = await settingsService.updateSettings({
@@ -185,7 +187,8 @@ export const updateSettings = async (req: AuthenticatedRequest, res: Response) =
       quepasaLogin,
       quepasaPassword,
       companyName,
-      pageTitle
+      pageTitle,
+      primaryColor
     });
 
     // Para configurações AI e Chatwoot, usar tenantId do usuário, ou parâmetro tenantId para SUPERADMIN

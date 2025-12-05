@@ -5,6 +5,8 @@ interface Settings {
   pageTitle?: string;
   iconUrl?: string;
   companyName?: string;
+  primaryColor?: string;
+  logoUrl?: string;
 }
 
 export function useGlobalSettings() {
@@ -27,7 +29,9 @@ export function useGlobalSettings() {
           faviconUrl: data.faviconUrl,
           pageTitle: data.pageTitle,
           iconUrl: data.iconUrl,
-          companyName: data.companyName
+          companyName: data.companyName,
+          primaryColor: data.primaryColor || '#21975f',
+          logoUrl: data.logoUrl
         });
       }
     } catch (err) {

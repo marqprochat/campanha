@@ -52,6 +52,55 @@ function AppContent() {
     }
   }, [settings?.pageTitle, settings?.faviconUrl]);
 
+  useEffect(() => {
+    // Generate palette and inject CSS variables
+    const primaryColor = settings?.primaryColor || '#3B82F6'; // Default to blue-600 if nothing set
+
+    // Configurações de mistura para criar a escala de cores (baseado no Tailwind Blue)
+    // Esses valores definem quanto mesclar com branco (para tons claros) ou preto (para tons escuros)
+    const shades = {
+      50: { mix: '#ffffff', weight: 0.95 },
+      100: { mix: '#ffffff', weight: 0.9 },
+      200: { mix: '#ffffff', weight: 0.75 },
+      300: { mix: '#ffffff', weight: 0.5 },
+      400: { mix: '#ffffff', weight: 0.25 },
+      500: { mix: '#ffffff', weight: 0.1 },
+      600: { mix: null, weight: 0 }, // Cor base
+      700: { mix: '#000000', weight: 0.1 },
+      800: { mix: '#000000', weight: 0.25 },
+      900: { mix: '#000000', weight: 0.5 },
+      950: { mix: '#000000', weight: 0.75 },
+    };
+
+    // Helper simples para misturar cores
+    const mixColors = (color1: string, color2: string, weight: number) => {
+      const d2h = (d: number) => d.toString(16).padStart(2, '0');
+      const h2d = (h: string) => parseInt(h, 16);
+
+      let color = color1.replace('#', '');
+      let mix = color2.replace('#', '');
+
+      let r = Math.round(h2d(color.substring(0, 2)) * (1 - weight) + h2d(mix.substring(0, 2)) * weight);
+      let g = Math.round(h2d(color.substring(2, 4)) * (1 - weight) + h2d(mix.substring(2, 4)) * weight);
+      let b = Math.round(h2d(color.substring(4, 6)) * (1 - weight) + h2d(mix.substring(4, 6)) * weight);
+
+      return `#${d2h(r)}${d2h(g)}${d2h(b)}`;
+    };
+
+    const root = document.documentElement;
+
+    Object.entries(shades).forEach(([shade, config]) => {
+      let colorValue;
+      if (config.mix === null) {
+        colorValue = primaryColor;
+      } else {
+        colorValue = mixColors(primaryColor, config.mix, config.weight);
+      }
+      root.style.setProperty(`--color-primary-${shade}`, colorValue);
+    });
+
+  }, [settings?.primaryColor]);
+
   // Remove any banners dynamically - more specific targeting
   useEffect(() => {
     const removeBanners = () => {

@@ -3,20 +3,20 @@
 @tailwind utilities;
 
 :root {
-  /* Cores principais da Astra Online */
-  --astra-dark-blue: #1e3a5f;
-  --astra-light-blue: #4a9eff;
-  --astra-cyan: #00d4ff;
+  /* Cores principais da Astra Online - Agora mapeadas para variáveis dinâmicas */
+  --astra-dark-blue: var(--color-primary-800);
+  --astra-light-blue: var(--color-primary-400);
+  --astra-cyan: var(--color-primary-300);
 
   /* Cores principais baseadas na Astra */
-  --primary-blue: #1e3a5f;
-  --primary-blue-dark: #162d47;
-  --primary-blue-light: #4a9eff;
+  --primary-blue: var(--color-primary-600);
+  --primary-blue-dark: var(--color-primary-800);
+  --primary-blue-light: var(--color-primary-400);
 
   /* Cores do sidebar usando a paleta Astra */
-  --sidebar-bg: linear-gradient(135deg, #1e3a5f 0%, #2a4a6b 100%);
-  --sidebar-hover: rgba(74, 158, 255, 0.15);
-  --sidebar-active: rgba(74, 158, 255, 0.25);
+  --sidebar-bg: linear-gradient(135deg, var(--color-primary-800) 0%, var(--color-primary-900) 100%);
+  --sidebar-hover: rgba(255, 255, 255, 0.1);
+  --sidebar-active: rgba(255, 255, 255, 0.2);
 
   /* Cores de fundo */
   --bg-primary: #f8fafc;
@@ -53,14 +53,14 @@ body {
 
 /* Utilitários customizados usando cores da Astra */
 .btn-primary {
-  background-color: var(--astra-dark-blue);
+  background-color: var(--primary-blue);
   @apply hover:bg-opacity-90 text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
-  box-shadow: 0 1px 3px rgba(30, 58, 95, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .btn-primary:hover {
   background-color: var(--primary-blue-dark);
-  box-shadow: 0 4px 8px rgba(30, 58, 95, 0.3);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .btn-primary:focus {

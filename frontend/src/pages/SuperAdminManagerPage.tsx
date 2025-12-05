@@ -140,6 +140,7 @@ interface Settings {
   iconUrl?: string;
   openaiApiKey?: string;
   groqApiKey?: string;
+  primaryColor?: string;
 }
 
 const settingsSchema = z.object({
@@ -234,6 +235,10 @@ export function SuperAdminManagerPage() {
   const [iconPreview, setIconPreview] = useState<string>('');
   const [uploadingIcon, setUploadingIcon] = useState(false);
 
+  // Primary Color states
+  const [primaryColor, setPrimaryColor] = useState<string>('#21975f');
+  const [savingPrimaryColor, setSavingPrimaryColor] = useState(false);
+
   useEffect(() => {
     loadData();
     if (activeTab === 'integrations') {
@@ -306,6 +311,7 @@ export function SuperAdminManagerPage() {
         setGeneralSettings(data);
         setGeneralValue('companyName', data.companyName || '');
         setGeneralValue('pageTitle', data.pageTitle || '');
+        setPrimaryColor(data.primaryColor || '#21975f');
       }
     } catch (error) {
       console.error('Erro ao carregar configurações gerais:', error);
@@ -553,6 +559,30 @@ export function SuperAdminManagerPage() {
     } catch (error) {
       console.error('Erro ao remover ícone:', error);
       toast.error('Erro ao remover ícone');
+    }
+  };
+
+  // Save primary color
+  const savePrimaryColor = async () => {
+    setSavingPrimaryColor(true);
+    try {
+      const response = await authenticatedFetch('/api/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ primaryColor }),
+      });
+
+      if (response.ok) {
+        toast.success('Cor primária salva com sucesso! A mudança será refletida em todas as páginas.');
+        loadGeneralSettings();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Erro ao salvar cor primária');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar cor primária:', error);
+      toast.error('Erro ao salvar cor primária');
+    } finally {
+      setSavingPrimaryColor(false);
     }
   };
 
@@ -1021,61 +1051,55 @@ export function SuperAdminManagerPage() {
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('general')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'general'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'general'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             ⚙️ Configurações Gerais
           </button>
           <button
             onClick={() => setActiveTab('appearance')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'appearance'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'appearance'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             🎨 Aparência
           </button>
           <button
             onClick={() => setActiveTab('integrations')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'integrations'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'integrations'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             🔗 Integrações
           </button>
           <button
             onClick={() => setActiveTab('tenants')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'tenants'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'tenants'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             🏢 Empresas
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'users'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'users'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             👥 Usuários
           </button>
           <button
             onClick={() => setActiveTab('backup')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'backup'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'backup'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             💾 Backup
           </button>
@@ -1110,11 +1134,10 @@ export function SuperAdminManagerPage() {
                         </p>
                       </div>
 
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        tenant.active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${tenant.active
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                        }`}>
                         {tenant.active ? 'Ativo' : 'Inativo'}
                       </span>
                     </div>
@@ -1151,11 +1174,10 @@ export function SuperAdminManagerPage() {
                     </button>
                     <button
                       onClick={() => handleToggleTenantStatus(tenant)}
-                      className={`px-3 py-2 text-sm rounded-lg ${
-                        tenant.active
-                          ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                          : 'bg-green-100 text-green-700 hover:bg-green-200'
-                      }`}
+                      className={`px-3 py-2 text-sm rounded-lg ${tenant.active
+                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                        : 'bg-green-100 text-green-700 hover:bg-green-200'
+                        }`}
                     >
                       {tenant.active ? 'Desativar' : 'Ativar'}
                     </button>
@@ -1233,23 +1255,21 @@ export function SuperAdminManagerPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        user.role === 'SUPERADMIN'
-                          ? 'bg-purple-100 text-purple-800'
-                          : user.role === 'ADMIN'
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${user.role === 'SUPERADMIN'
+                        ? 'bg-purple-100 text-purple-800'
+                        : user.role === 'ADMIN'
                           ? 'bg-blue-100 text-blue-800'
                           : 'bg-gray-100 text-gray-800'
-                      }`}>
+                        }`}>
                         {user.role === 'SUPERADMIN' ? 'Super Admin' :
-                         user.role === 'ADMIN' ? 'Admin' : 'Usuário'}
+                          user.role === 'ADMIN' ? 'Admin' : 'Usuário'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        user.ativo
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${user.ativo
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                        }`}>
                         {user.ativo ? 'Ativo' : 'Inativo'}
                       </span>
                     </td>
@@ -1272,11 +1292,10 @@ export function SuperAdminManagerPage() {
                         </button>
                         <button
                           onClick={() => handleToggleUserStatus(user)}
-                          className={`text-sm ${
-                            user.ativo
-                              ? 'text-red-600 hover:text-red-900'
-                              : 'text-green-600 hover:text-green-900'
-                          }`}
+                          className={`text-sm ${user.ativo
+                            ? 'text-red-600 hover:text-red-900'
+                            : 'text-green-600 hover:text-green-900'
+                            }`}
                         >
                           {user.ativo ? 'Desativar' : 'Ativar'}
                         </button>
@@ -1648,11 +1667,10 @@ export function SuperAdminManagerPage() {
                               return (
                                 <label
                                   key={tenant.id}
-                                  className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
-                                    isSelected
-                                      ? 'bg-blue-50 border border-blue-200'
-                                      : 'bg-gray-50 border border-gray-200 hover:bg-gray-100'
-                                  }`}
+                                  className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${isSelected
+                                    ? 'bg-blue-50 border border-blue-200'
+                                    : 'bg-gray-50 border border-gray-200 hover:bg-gray-100'
+                                    }`}
                                 >
                                   <input
                                     type="checkbox"
@@ -1678,11 +1696,10 @@ export function SuperAdminManagerPage() {
                                       <span className={`text-sm font-medium ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
                                         {tenant.name}
                                       </span>
-                                      <span className={`text-xs px-2 py-0.5 rounded ${
-                                        tenant.active
-                                          ? 'bg-green-100 text-green-800'
-                                          : 'bg-red-100 text-red-800'
-                                      }`}>
+                                      <span className={`text-xs px-2 py-0.5 rounded ${tenant.active
+                                        ? 'bg-green-100 text-green-800'
+                                        : 'bg-red-100 text-red-800'
+                                        }`}>
                                         {tenant.active ? 'Ativa' : 'Inativa'}
                                       </span>
                                     </div>
@@ -1775,11 +1792,10 @@ export function SuperAdminManagerPage() {
                 </div>
                 <div className="mt-auto text-center">
                   <p className="text-xs text-gray-500 mb-2">WhatsApp HTTP API</p>
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    integrationSettings?.wahaHost && integrationSettings?.wahaApiKey
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${integrationSettings?.wahaHost && integrationSettings?.wahaApiKey
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-gray-100 text-gray-600'
+                    }`}>
                     {integrationSettings?.wahaHost && integrationSettings?.wahaApiKey ? 'Configurado' : 'Não configurado'}
                   </span>
                 </div>
@@ -1801,11 +1817,10 @@ export function SuperAdminManagerPage() {
                 </div>
                 <div className="mt-auto text-center">
                   <p className="text-xs text-gray-500 mb-2">WhatsApp API Evolution</p>
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    integrationSettings?.evolutionHost && integrationSettings?.evolutionApiKey
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${integrationSettings?.evolutionHost && integrationSettings?.evolutionApiKey
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-gray-100 text-gray-600'
+                    }`}>
                     {integrationSettings?.evolutionHost && integrationSettings?.evolutionApiKey ? 'Configurado' : 'Não configurado'}
                   </span>
                 </div>
@@ -1827,11 +1842,10 @@ export function SuperAdminManagerPage() {
                 </div>
                 <div className="mt-auto text-center">
                   <p className="text-xs text-gray-500 mb-2">WhatsApp API Quepasa</p>
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    integrationSettings?.quepasaUrl && integrationSettings?.quepasaLogin && integrationSettings?.quepasaPassword
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${integrationSettings?.quepasaUrl && integrationSettings?.quepasaLogin && integrationSettings?.quepasaPassword
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-gray-100 text-gray-600'
+                    }`}>
                     {integrationSettings?.quepasaUrl && integrationSettings?.quepasaLogin && integrationSettings?.quepasaPassword ? 'Configurado' : 'Não configurado'}
                   </span>
                 </div>
@@ -2111,6 +2125,100 @@ export function SuperAdminManagerPage() {
               )}
             </div>
           </div>
+
+          {/* Cor Primária */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold mb-4 text-gray-900">
+              🎨 Cor Primária do Sistema
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Esta cor será aplicada em toda a plataforma, incluindo a página de login, botões, focos e elementos de destaque.
+            </p>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div>
+                  <label htmlFor="primaryColor" className="block text-sm font-medium text-gray-700 mb-2">
+                    Selecione a cor
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      id="primaryColor"
+                      type="color"
+                      value={primaryColor}
+                      onChange={(e) => setPrimaryColor(e.target.value)}
+                      className="h-12 w-16 border border-gray-300 rounded cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={primaryColor}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (/^#[0-9A-Fa-f]{0,6}$/.test(value)) {
+                          setPrimaryColor(value);
+                        }
+                      }}
+                      className="w-28 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                      placeholder="#21975f"
+                    />
+                  </div>
+                </div>
+
+                {/* Preview */}
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Preview:</p>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-20 h-10 rounded-lg"
+                      style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}CC 100%)` }}
+                    />
+                    <button
+                      type="button"
+                      className="px-4 py-2 text-white rounded-lg text-sm font-medium"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      Botão Exemplo
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cores predefinidas */}
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Cores sugeridas:</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { color: '#21975f', name: 'Verde (padrão)' },
+                    { color: '#3B82F6', name: 'Azul' },
+                    { color: '#8B5CF6', name: 'Roxo' },
+                    { color: '#EC4899', name: 'Rosa' },
+                    { color: '#F59E0B', name: 'Laranja' },
+                    { color: '#10B981', name: 'Esmeralda' },
+                    { color: '#6366F1', name: 'Índigo' },
+                    { color: '#EF4444', name: 'Vermelho' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.color}
+                      type="button"
+                      onClick={() => setPrimaryColor(preset.color)}
+                      className={`w-8 h-8 rounded-full border-2 transition-all ${primaryColor === preset.color ? 'border-gray-900 scale-110' : 'border-gray-300 hover:border-gray-500'
+                        }`}
+                      style={{ backgroundColor: preset.color }}
+                      title={preset.name}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={savePrimaryColor}
+                disabled={savingPrimaryColor}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 mt-4"
+              >
+                {savingPrimaryColor ? 'Salvando...' : 'Salvar Cor Primária'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -2184,172 +2292,177 @@ export function SuperAdminManagerPage() {
             </form>
           </div>
         </div>
-      )}
+      )
+      }
 
       {/* Modal Evolution API */}
-      {activeModal === 'evolution' && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">🚀 Configurar Evolution API</h3>
-              <button
-                onClick={() => setActiveModal(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleFormSubmit(onIntegrationSubmit)} className="space-y-4">
-              <div>
-                <label htmlFor="evolutionHost" className="block text-sm font-medium text-gray-700 mb-1">
-                  Host Evolution *
-                </label>
-                <input
-                  id="evolutionHost"
-                  type="url"
-                  {...register('evolutionHost')}
-                  placeholder="https://evolution.exemplo.com.br"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {errors.evolutionHost && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {errors.evolutionHost.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="evolutionApiKey" className="block text-sm font-medium text-gray-700 mb-1">
-                  API Key Evolution *
-                </label>
-                <input
-                  id="evolutionApiKey"
-                  type="password"
-                  {...register('evolutionApiKey')}
-                  placeholder="sua-api-key-evolution-aqui"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {errors.evolutionApiKey && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {errors.evolutionApiKey.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-3 pt-4">
+      {
+        activeModal === 'evolution' && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">🚀 Configurar Evolution API</h3>
                 <button
-                  type="button"
                   onClick={() => setActiveModal(null)}
-                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  className="text-gray-400 hover:text-gray-600"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Salvando...' : 'Salvar'}
+                  ✕
                 </button>
               </div>
-            </form>
+
+              <form onSubmit={handleFormSubmit(onIntegrationSubmit)} className="space-y-4">
+                <div>
+                  <label htmlFor="evolutionHost" className="block text-sm font-medium text-gray-700 mb-1">
+                    Host Evolution *
+                  </label>
+                  <input
+                    id="evolutionHost"
+                    type="url"
+                    {...register('evolutionHost')}
+                    placeholder="https://evolution.exemplo.com.br"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {errors.evolutionHost && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.evolutionHost.message}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="evolutionApiKey" className="block text-sm font-medium text-gray-700 mb-1">
+                    API Key Evolution *
+                  </label>
+                  <input
+                    id="evolutionApiKey"
+                    type="password"
+                    {...register('evolutionApiKey')}
+                    placeholder="sua-api-key-evolution-aqui"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {errors.evolutionApiKey && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.evolutionApiKey.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setActiveModal(null)}
+                    className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {isSubmitting ? 'Salvando...' : 'Salvar'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Modal Quepasa */}
-      {activeModal === 'quepasa' && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
-                <img src="/logoquepasa.png?v=2" alt="Quepasa" className="w-6 h-6 object-contain" />
-                <h3 className="text-lg font-semibold text-gray-900">Configurar Quepasa</h3>
-              </div>
-              <button
-                onClick={() => setActiveModal(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleFormSubmit(onIntegrationSubmit)} className="space-y-4">
-              <div>
-                <label htmlFor="quepasaUrl" className="block text-sm font-medium text-gray-700 mb-1">
-                  URL do Quepasa *
-                </label>
-                <input
-                  id="quepasaUrl"
-                  type="url"
-                  {...register('quepasaUrl')}
-                  placeholder="https://quepasa.exemplo.com.br"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-                {errors.quepasaUrl && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {errors.quepasaUrl.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="quepasaLogin" className="block text-sm font-medium text-gray-700 mb-1">
-                  Login *
-                </label>
-                <input
-                  id="quepasaLogin"
-                  type="text"
-                  {...register('quepasaLogin')}
-                  placeholder="admin"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-                {errors.quepasaLogin && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {errors.quepasaLogin.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="quepasaPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Senha *
-                </label>
-                <input
-                  id="quepasaPassword"
-                  type="password"
-                  {...register('quepasaPassword')}
-                  placeholder="••••••••••••••••"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-                {errors.quepasaPassword && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {errors.quepasaPassword.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-3 pt-4">
+      {
+        activeModal === 'quepasa' && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <img src="/logoquepasa.png?v=2" alt="Quepasa" className="w-6 h-6 object-contain" />
+                  <h3 className="text-lg font-semibold text-gray-900">Configurar Quepasa</h3>
+                </div>
                 <button
-                  type="button"
                   onClick={() => setActiveModal(null)}
-                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  className="text-gray-400 hover:text-gray-600"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Salvando...' : 'Salvar'}
+                  ✕
                 </button>
               </div>
-            </form>
+
+              <form onSubmit={handleFormSubmit(onIntegrationSubmit)} className="space-y-4">
+                <div>
+                  <label htmlFor="quepasaUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                    URL do Quepasa *
+                  </label>
+                  <input
+                    id="quepasaUrl"
+                    type="url"
+                    {...register('quepasaUrl')}
+                    placeholder="https://quepasa.exemplo.com.br"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                  {errors.quepasaUrl && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.quepasaUrl.message}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="quepasaLogin" className="block text-sm font-medium text-gray-700 mb-1">
+                    Login *
+                  </label>
+                  <input
+                    id="quepasaLogin"
+                    type="text"
+                    {...register('quepasaLogin')}
+                    placeholder="admin"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                  {errors.quepasaLogin && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.quepasaLogin.message}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="quepasaPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                    Senha *
+                  </label>
+                  <input
+                    id="quepasaPassword"
+                    type="password"
+                    {...register('quepasaPassword')}
+                    placeholder="••••••••••••••••"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                  {errors.quepasaPassword && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.quepasaPassword.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setActiveModal(null)}
+                    className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
+                  >
+                    {isSubmitting ? 'Salvando...' : 'Salvar'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,10 +12,33 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
+// Helper function to darken a hex color
+function darkenColor(hex: string, percent: number): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = Math.max((num >> 16) - amt, 0);
+  const G = Math.max((num >> 8 & 0x00FF) - amt, 0);
+  const B = Math.max((num & 0x0000FF) - amt, 0);
+  return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+}
+
+// Helper to get rgba from hex
+function hexToRgba(hex: string, alpha: number): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const R = (num >> 16) & 255;
+  const G = (num >> 8) & 255;
+  const B = num & 255;
+  return `rgba(${R}, ${G}, ${B}, ${alpha})`;
+}
+
 export function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
   const { settings } = useGlobalSettings();
+
+  // Get primary color from settings or use default
+  const primaryColor = settings?.primaryColor || '#21975f';
+  const darkerColor = useMemo(() => darkenColor(primaryColor, 15), [primaryColor]);
 
   const {
     register,
@@ -38,25 +61,38 @@ export function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden">
         <div className="flex flex-col lg:flex-row">
-          <div className="lg:w-1/2 p-12 flex items-center justify-center text-white" style={{ background: 'linear-gradient(135deg, #233e4f 0%, #1a2d3b 100%)' }}>
+          <div
+            className="lg:w-1/2 p-12 flex items-center justify-center text-white"
+            style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${darkerColor} 100%)` }}
+          >
             <div className="text-center">
-              <div className="w-24 h-24 bg-white/20 rounded-2xl mx-auto mb-8 flex items-center justify-center backdrop-blur-sm">
-                {settings?.iconUrl ? (
+              {settings?.logoUrl ? (
+                <div className="mx-auto mb-8 flex items-center justify-center">
                   <img
-                    src={settings.iconUrl}
-                    alt="Ícone do Sistema"
-                    className="w-16 h-16 object-contain"
-                    style={{ filter: 'brightness(0) invert(1)' }}
+                    src={settings.logoUrl}
+                    alt="Logo do Sistema"
+                    className="max-h-32 max-w-[80%] object-contain"
                   />
-                ) : (
-                  <img
-                    src="/favicon.png"
-                    alt="Astra Online"
-                    className="w-16 h-16 object-contain"
-                    style={{ filter: 'brightness(0) invert(1)' }}
-                  />
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="w-24 h-24 bg-white/20 rounded-2xl mx-auto mb-8 flex items-center justify-center backdrop-blur-sm">
+                  {settings?.iconUrl ? (
+                    <img
+                      src={settings.iconUrl}
+                      alt="Ícone do Sistema"
+                      className="w-16 h-16 object-contain"
+                      style={{ filter: 'brightness(0) invert(1)' }}
+                    />
+                  ) : (
+                    <img
+                      src="/favicon.png"
+                      alt="Astra Online"
+                      className="w-16 h-16 object-contain"
+                      style={{ filter: 'brightness(0) invert(1)' }}
+                    />
+                  )}
+                </div>
+              )}
               <h1 className="text-4xl font-bold mb-4">
                 {settings?.pageTitle || 'Astra Online'}
               </h1>
@@ -87,13 +123,13 @@ export function LoginPage() {
                     id="email"
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:border-transparent transition-colors"
                     style={{
-                      '--tw-ring-color': '#233e4f'
+                      '--tw-ring-color': primaryColor
                     } as React.CSSProperties}
                     onFocus={(e) => {
                       const target = e.target as HTMLInputElement;
                       target.style.outline = 'none';
-                      target.style.borderColor = '#233e4f';
-                      target.style.boxShadow = '0 0 0 2px rgba(35, 62, 79, 0.2)';
+                      target.style.borderColor = primaryColor;
+                      target.style.boxShadow = `0 0 0 2px ${hexToRgba(primaryColor, 0.2)}`;
                     }}
                     onBlur={(e) => {
                       const target = e.target as HTMLInputElement;
@@ -118,13 +154,13 @@ export function LoginPage() {
                     id="senha"
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:border-transparent transition-colors"
                     style={{
-                      '--tw-ring-color': '#233e4f'
+                      '--tw-ring-color': primaryColor
                     } as React.CSSProperties}
                     onFocus={(e) => {
                       const target = e.target as HTMLInputElement;
                       target.style.outline = 'none';
-                      target.style.borderColor = '#233e4f';
-                      target.style.boxShadow = '0 0 0 2px rgba(35, 62, 79, 0.2)';
+                      target.style.borderColor = primaryColor;
+                      target.style.boxShadow = `0 0 0 2px ${hexToRgba(primaryColor, 0.2)}`;
                     }}
                     onBlur={(e) => {
                       const target = e.target as HTMLInputElement;
@@ -144,16 +180,16 @@ export function LoginPage() {
                   disabled={isSubmitting}
                   className="w-full text-white py-3 px-6 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    background: 'linear-gradient(135deg, #233e4f 0%, #1a2d3b 100%)',
-                    '--tw-ring-color': '#233e4f'
+                    background: `linear-gradient(135deg, ${primaryColor} 0%, ${darkerColor} 100%)`,
+                    '--tw-ring-color': primaryColor
                   } as React.CSSProperties}
                   onMouseEnter={(e) => {
                     const target = e.target as HTMLButtonElement;
-                    target.style.background = 'linear-gradient(135deg, #1a2d3b 0%, #0f1a23 100%)';
+                    target.style.background = `linear-gradient(135deg, ${darkerColor} 0%, ${darkenColor(darkerColor, 15)} 100%)`;
                   }}
                   onMouseLeave={(e) => {
                     const target = e.target as HTMLButtonElement;
-                    target.style.background = 'linear-gradient(135deg, #233e4f 0%, #1a2d3b 100%)';
+                    target.style.background = `linear-gradient(135deg, ${primaryColor} 0%, ${darkerColor} 100%)`;
                   }}
                 >
                   {isSubmitting ? (
