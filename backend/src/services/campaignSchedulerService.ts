@@ -79,6 +79,13 @@ class CampaignSchedulerService {
       });
 
       for (const campaign of runningCampaigns) {
+        // Verificar janela de horário se habilitada
+        if (!this.isWithinTimeWindow(campaign)) {
+          // Opcional: Logar apenas em debug para não poluir
+          // console.log(`Campaign ${campaign.id} paused due to time window`);
+          continue;
+        }
+
         if (campaign.messages.length > 0) {
           await this.processNextMessage(campaign, campaign.messages[0]);
         } else {
@@ -101,7 +108,7 @@ class CampaignSchedulerService {
   }
 
   // Função para obter próxima sessão de forma sequencial (round-robin) com informações do provedor
-  private async getNextSequentialSession(campaignId: string, sessionNames: string[]): Promise<{name: string, provider: string} | null> {
+  private async getNextSequentialSession(campaignId: string, sessionNames: string[]): Promise<{ name: string, provider: string } | null> {
     try {
       // Buscar sessões ativas
       const activeSessions = await prisma.whatsAppSession.findMany({
@@ -186,7 +193,7 @@ class CampaignSchedulerService {
   }
 
   private async processNextMessage(campaign: any, message: any) {
-    let selectedSessionInfo: {name: string, provider: string} | null = null;
+    let selectedSessionInfo: { name: string, provider: string } | null = null;
     let selectedVariationInfo: string | null = null;
 
     try {
@@ -1008,6 +1015,30 @@ class CampaignSchedulerService {
       }
     } catch (error) {
       console.error(`Error completing campaign ${campaignId}:`, error);
+    }
+  }
+
+  private isWithinTimeWindow(campaign: any): boolean {
+    if (!campaign.useTimeWindow || !campaign.startTime || !campaign.endTime) {
+      return true;
+    }
+
+    const now = new Date();
+    const currentHours = now.getHours();
+    const currentMinutes = now.getMinutes();
+    const currentTimeVal = currentHours * 60 + currentMinutes;
+
+    const [startH, startM] = campaign.startTime.split(':').map(Number);
+    const startTimeVal = startH * 60 + startM;
+
+    const [endH, endM] = campaign.endTime.split(':').map(Number);
+    const endTimeVal = endH * 60 + endM;
+
+    if (startTimeVal <= endTimeVal) {
+      return currentTimeVal >= startTimeVal && currentTimeVal <= endTimeVal;
+    } else {
+      // Crosses midnight (e.g. 22:00 to 06:00)
+      return currentTimeVal >= startTimeVal || currentTimeVal <= endTimeVal;
     }
   }
 }

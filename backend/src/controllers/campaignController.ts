@@ -16,7 +16,10 @@ export const campaignValidation = [
   body('messageContent').notEmpty().withMessage('Conteúdo da mensagem é obrigatório'),
   body('randomDelay').isInt({ min: 0 }).withMessage('Delay deve ser um número positivo'),
   body('startImmediately').isBoolean().withMessage('StartImmediately deve ser boolean'),
-  body('scheduledFor').optional({ nullable: true, checkFalsy: true }).isISO8601().withMessage('Data de agendamento deve ser válida')
+  body('scheduledFor').optional({ nullable: true, checkFalsy: true }).isISO8601().withMessage('Data de agendamento deve ser válida'),
+  body('useTimeWindow').optional().isBoolean(),
+  body('startTime').optional({ nullable: true }).matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Hora de início inválida'),
+  body('endTime').optional({ nullable: true }).matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Hora de fim inválida')
 ];
 
 // List all campaigns
@@ -155,7 +158,10 @@ export const createCampaign = async (req: AuthenticatedRequest, res: Response) =
       messageContent,
       randomDelay,
       startImmediately,
-      scheduledFor
+      scheduledFor,
+      startTime,
+      endTime,
+      useTimeWindow
     } = req.body;
 
     // Log detalhado da criação de campanha
@@ -236,6 +242,9 @@ export const createCampaign = async (req: AuthenticatedRequest, res: Response) =
         randomDelay,
         startImmediately,
         scheduledFor: scheduledFor ? new Date(scheduledFor) : null,
+        startTime,
+        endTime,
+        useTimeWindow: useTimeWindow || false,
         totalContacts: filteredContacts.length,
         status: startImmediately ? 'RUNNING' : 'PENDING',
         startedAt: startImmediately ? new Date() : null,
