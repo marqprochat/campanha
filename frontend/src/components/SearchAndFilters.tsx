@@ -12,6 +12,7 @@ interface SearchAndFiltersProps {
   onSearchChange: (search: string) => void;
   onCategoryChange: (categoryId: string) => void;
   onClearFilters: () => void;
+  hideCategoryFilter?: boolean;
 }
 
 export function SearchAndFilters({
@@ -20,12 +21,15 @@ export function SearchAndFilters({
   onSearchChange,
   onCategoryChange,
   onClearFilters,
+  hideCategoryFilter = false,
 }: SearchAndFiltersProps) {
   const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
-    loadCategories();
-  }, []);
+    if (!hideCategoryFilter) {
+      loadCategories();
+    }
+  }, [hideCategoryFilter]);
 
   const loadCategories = async () => {
     try {
@@ -54,27 +58,29 @@ export function SearchAndFilters({
           />
         </div>
 
-        <div className="w-full sm:w-64">
-          <label htmlFor="category" className="sr-only">
-            Filtrar por categoria
-          </label>
-          <select
-            id="category"
-            value={selectedCategory}
-            onChange={(e) => onCategoryChange(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            aria-label="Filtrar por categoria"
-          >
-            <option value="">Todas as categorias</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.nome}
-              </option>
-            ))}
-          </select>
-        </div>
+        {!hideCategoryFilter && (
+          <div className="w-full sm:w-64">
+            <label htmlFor="category" className="sr-only">
+              Filtrar por categoria
+            </label>
+            <select
+              id="category"
+              value={selectedCategory}
+              onChange={(e) => onCategoryChange(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label="Filtrar por categoria"
+            >
+              <option value="">Todas as categorias</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
-        {(search || selectedCategory) && (
+        {(search || (selectedCategory && !hideCategoryFilter)) && (
           <button
             onClick={onClearFilters}
             className="px-4 py-2 text-gray-600 hover:text-gray-800 focus:outline-none focus:underline whitespace-nowrap"
