@@ -258,29 +258,17 @@ export const LeadPageEditor: React.FC = () => {
                                                     }
 
                                                     const formDataUpload = new FormData();
-                                                    formDataUpload.append('file', file);
 
-                                                    const toastId = toast.loading('Enviando imagem...');
-                                                    try {
-                                                        const token = localStorage.getItem('auth_token');
-                                                        const res = await fetch('http://localhost:3006/api/upload/image', { // Ensure API URL is correct
-                                                            method: 'POST',
-                                                            headers: {
-                                                                'Authorization': `Bearer ${token}`
-                                                            },
-                                                            body: formDataUpload
-                                                        });
+                                                    if (!res.ok) throw new Error('Falha no upload');
 
-                                                        if (!res.ok) throw new Error('Falha no upload');
-
-                                                        const data = await res.json();
-                                                        setFormData(prev => ({ ...prev, backgroundImageUrl: data.url }));
-                                                        toast.success('Imagem carregada!', { id: toastId });
-                                                    } catch (err) {
-                                                        console.error(err);
-                                                        toast.error('Erro ao enviar imagem', { id: toastId });
+                                                    const data = await res.json();
+                                                    setFormData(prev => ({ ...prev, backgroundImageUrl: data.url }));
+                                                    toast.success('Imagem carregada!', { id: toastId });
+                                                } catch (err) {
+                                                console.error(err);
+                                            toast.error('Erro ao enviar imagem', {id: toastId });
                                                     }
-                                                    e.target.value = '';
+                                            e.target.value = '';
                                                 }}
                                             />
                                         </label>

@@ -60,7 +60,8 @@ const corsOptions = {
     const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
       'http://localhost:3000',
       'http://localhost:5173',
-      'https://localhost:3000'
+      'https://localhost:3000',
+      'https://campanha.marqsolucoes.com.br'
     ];
 
     if (!origin) return callback(null, true);
