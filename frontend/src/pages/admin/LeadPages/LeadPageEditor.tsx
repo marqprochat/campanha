@@ -258,17 +258,29 @@ export const LeadPageEditor: React.FC = () => {
                                                     }
 
                                                     const formDataUpload = new FormData();
+                                                    formDataUpload.append('file', file);
 
-                                                    if (!res.ok) throw new Error('Falha no upload');
+                                                    const toastId = toast.loading('Enviando imagem...');
+                                                    try {
+                                                        const token = localStorage.getItem('auth_token');
+                                                        const res = await fetch('/api/upload/image', {
+                                                            method: 'POST',
+                                                            headers: {
+                                                                'Authorization': `Bearer ${token}`
+                                                            },
+                                                            body: formDataUpload
+                                                        });
 
-                                                    const data = await res.json();
-                                                    setFormData(prev => ({ ...prev, backgroundImageUrl: data.url }));
-                                                    toast.success('Imagem carregada!', { id: toastId });
-                                                } catch (err) {
-                                                console.error(err);
-                                            toast.error('Erro ao enviar imagem', {id: toastId });
+                                                        if (!res.ok) throw new Error('Falha no upload');
+
+                                                        const data = await res.json();
+                                                        setFormData(prev => ({ ...prev, backgroundImageUrl: data.url }));
+                                                        toast.success('Imagem carregada!', { id: toastId });
+                                                    } catch (err) {
+                                                        console.error(err);
+                                                        toast.error('Erro ao enviar imagem', { id: toastId });
                                                     }
-                                            e.target.value = '';
+                                                    e.target.value = '';
                                                 }}
                                             />
                                         </label>
