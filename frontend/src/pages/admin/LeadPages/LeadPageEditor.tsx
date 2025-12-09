@@ -63,8 +63,6 @@ export const LeadPageEditor: React.FC = () => {
 
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const title = e.target.value;
-        // Auto-generate slug from title only if creating new page and slug wasn't manually edited (simplified check)
-        // Or just let user edit slug separately.
         if (!isEditing && !formData.slug) {
             setFormData(prev => ({ ...prev, title, slug: generateSlug(title) }));
         } else {
@@ -232,15 +230,82 @@ export const LeadPageEditor: React.FC = () => {
                         </div>
 
                         <div className="col-span-1 md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">URL da Imagem de Fundo (Opcional)</label>
-                            <input
-                                type="text"
-                                value={formData.backgroundImageUrl}
-                                onChange={(e) => setFormData({ ...formData, backgroundImageUrl: e.target.value })}
-                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border"
-                                placeholder="https://exemplo.com/imagem.jpg"
-                            />
-                            <p className="mt-1 text-sm text-gray-500">Cole o link de uma imagem externa para usar como fundo.</p>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Imagem de Fundo</label>
+                            <div className="flex items-start gap-4">
+                                <div className="flex-1">
+                                    <input
+                                        type="text"
+                                        value={formData.backgroundImageUrl}
+                                        onChange={(e) => setFormData({ ...formData, backgroundImageUrl: e.target.value })}
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border mb-2"
+                                        placeholder="https://..."
+                                    />
+
+                                    <div className="flex items-center gap-2">
+                                        <label className="cursor-pointer bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-1.5 rounded-md text-sm font-medium inline-flex items-center gap-2 transition-colors">
+                                            <span>📤 Carregar Imagem</span>
+                                            <input
+                                                type="file"
+                                                className="hidden"
+                                                accept="image/jpeg,image/png,image/webp,image/gif"
+                                                onChange={async (e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (!file) return;
+
+                                                    if (file.size > 2 * 1024 * 1024) {
+                                                        toast.error('A imagem deve ter no máximo 2MB');
+                                                        return;
+                                                    }
+
+                                                    const formDataUpload = new FormData();
+                                                    formDataUpload.append('file', file);
+
+                                                    const toastId = toast.loading('Enviando imagem...');
+                                                    try {
+                                                        const token = localStorage.getItem('auth_token');
+                                                        const res = await fetch('http://localhost:3006/api/upload/image', { // Ensure API URL is correct
+                                                            method: 'POST',
+                                                            headers: {
+                                                                'Authorization': `Bearer ${token}`
+                                                            },
+                                                            body: formDataUpload
+                                                        });
+
+                                                        if (!res.ok) throw new Error('Falha no upload');
+
+                                                        const data = await res.json();
+                                                        setFormData(prev => ({ ...prev, backgroundImageUrl: data.url }));
+                                                        toast.success('Imagem carregada!', { id: toastId });
+                                                    } catch (err) {
+                                                        console.error(err);
+                                                        toast.error('Erro ao enviar imagem', { id: toastId });
+                                                    }
+                                                    e.target.value = '';
+                                                }}
+                                            />
+                                        </label>
+                                        <span className="text-xs text-gray-500">Máx: 2MB</span>
+                                    </div>
+                                </div>
+
+                                {formData.backgroundImageUrl && (
+                                    <div className="relative w-24 h-24 rounded-lg border border-gray-200 overflow-hidden group">
+                                        <img
+                                            src={formData.backgroundImageUrl}
+                                            alt="Preview"
+                                            className="w-full h-full object-cover"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, backgroundImageUrl: '' })}
+                                            className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                            <p className="mt-1 text-sm text-gray-500">Cole uma URL externa ou carregue uma imagem do seu dispositivo.</p>
                         </div>
                     </div>
                 </div>

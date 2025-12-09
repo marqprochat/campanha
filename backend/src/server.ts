@@ -2,8 +2,10 @@ import 'dotenv/config';
 import express from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
-// import rateLimit from 'express-rate-limit'; // Temporariamente desabilitado
 import * as fs from 'fs';
+import path from 'path';
+
+// Routes
 import { contactRoutes } from './routes/contactRoutes';
 import { categoryRoutes } from './routes/categoryRoutes';
 import { mockRoutes } from './routes/mockRoutes';
@@ -26,32 +28,33 @@ import reportsRoutes from './routes/reports';
 import automationRoutes from './routes/automation';
 import chatwootRoutes from './routes/chatwootRoutes';
 import leadPageRoutes from './routes/leadPageRoutes';
-// import integrationsRoutes from './routes/integrations';
-// import cacheRoutes from './routes/cache';
+import uploadRoutes from './routes/uploadRoutes';
+
+// Services
 import { authMiddleware } from './middleware/auth';
-import './services/campaignSchedulerService'; // Inicializar scheduler
-import { initializeAlertsMonitoring } from './services/alertsMonitoringService'; // Inicializar monitoramento de alertas
-import { initializeBackupService } from './services/backupService'; // Inicializar serviço de backup
-import { websocketService } from './services/websocketService'; // Inicializar WebSocket
-import { automationService } from './services/automationService'; // Inicializar automação
+import './services/campaignSchedulerService';
+import { initializeAlertsMonitoring } from './services/alertsMonitoringService';
+import { initializeBackupService } from './services/backupService';
+import { websocketService } from './services/websocketService';
 
 const app = express();
 const server = createServer(app);
 const PORT = process.env.PORT || 3001;
 
-// Configurar para confiar no proxy (nginx/traefik) - apenas no primeiro proxy
+// Proxy configuration
 app.set('trust proxy', 1);
 
-// Criar diretório para uploads
+// Upload directory configuration
 const uploadDir = process.env.NODE_ENV === 'production'
   ? '/app/uploads'
-  : './uploads';
+  : './uploads'; // Check relative path if needed, often relative to process.cwd()
+
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
-  console.log(`📁 Diretório de uploads criado: ${uploadDir}`);
+  console.log(`📁 Directory created: ${uploadDir}`);
 }
 
-// CORS configurado de forma segura
+// CORS Config
 const corsOptions = {
   origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
     const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
@@ -60,13 +63,12 @@ const corsOptions = {
       'https://localhost:3000'
     ];
 
-    // Permitir requests sem origin (mobile apps, etc.)
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(new Error('Não permitido pelo CORS'), false);
+      callback(new Error('Not allowed by CORS'), false);
     }
   },
   credentials: true,
@@ -75,104 +77,60 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Rate limiting temporariamente desabilitado devido a problemas com trust proxy
-/*
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 1000, // limite de 1000 requests por IP por janela de tempo
-  message: {
-    error: 'Muitas requisições deste IP, tente novamente em 15 minutos.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 10, // limite de 10 tentativas de login por IP
-  message: {
-    error: 'Muitas tentativas de login, tente novamente em 15 minutos.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const aiLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minuto
-  max: 20, // limite de 20 requisições IA por minuto
-  message: {
-    error: 'Muitas requisições para IA, tente novamente em 1 minuto.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-*/
-
-// Temporariamente desabilitado devido a problemas com trust proxy
-// app.use(generalLimiter);
-
-// Middleware para todas as rotas exceto upload
+// Middleware
+// Exclude JSON/UrlEncoded processing for specific upload routes if needed, 
+// but usually multer handles it fine even if body-parser runs first unless specifically configured otherwise.
+// However, the previous code had an exclusion. Let's keep it safe.
 app.use((req, res, next) => {
-  if (req.path.includes('/media/upload')) {
+  if (req.path.includes('/media/upload') || req.path.includes('/upload/image')) {
     return next();
   }
   express.json({ limit: '50mb' })(req, res, next);
 });
 
 app.use((req, res, next) => {
-  if (req.path.includes('/media/upload')) {
+  if (req.path.includes('/media/upload') || req.path.includes('/upload/image')) {
     return next();
   }
   express.urlencoded({ limit: '50mb', extended: true })(req, res, next);
 });
 
-// Rotas públicas (autenticação) - rate limiting temporariamente desabilitado
+// Serve uploads
+app.use('/api/uploads', express.static(uploadDir));
+
+// Routes
 app.use('/api/auth', authRoutes);
-
-// Rota pública para configurações (favicon e título)
 app.use('/api/settings', settingsRoutes);
-
-// Health check público
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Servir uploads estaticamente (público)
-app.use('/api/uploads', express.static(uploadDir));
-
-// Rotas protegidas (requerem autenticação)
+// Protected Routes
 app.use('/api/contatos', authMiddleware, contactRoutes);
 app.use('/api/categorias', authMiddleware, categoryRoutes);
 app.use('/api/csv', authMiddleware, csvImportRoutes);
 app.use('/api/waha', authMiddleware, wahaRoutes);
 app.use('/api/campaigns', authMiddleware, campaignRoutes);
 app.use('/api/users', authMiddleware, usersRoutes);
-app.use('/api/tenants', authMiddleware, tenantRoutes); // SUPERADMIN only
+app.use('/api/tenants', authMiddleware, tenantRoutes);
 app.use('/api/user-tenants', authMiddleware, userTenantsRoutes);
-app.use('/api/backup', authMiddleware, backupRoutes); // Backup management
-app.use('/api/system', authMiddleware, systemRoutes); // SUPERADMIN only - System stats and monitoring
-app.use('/api/alerts', authMiddleware, alertsRoutes); // Alerts management
-app.use('/api/analytics', authMiddleware, analyticsRoutes); // Analytics and reporting per tenant
-app.use('/api/notifications', authMiddleware, notificationsRoutes); // User notifications
-app.use('/api/templates', authMiddleware, messageTemplatesRoutes); // Message templates system
-app.use('/api/reports', authMiddleware, reportsRoutes); // Advanced reporting system
-app.use('/api/automation', authMiddleware, automationRoutes); // Automation and workflow system
-app.use('/api/chatwoot', authMiddleware, chatwootRoutes); // Chatwoot integration
-app.use('/api/lead-pages', leadPageRoutes); // Lead Pages (Public & Protected mixed in router)
-// app.use('/api/integrations', integrationsRoutes); // External API integrations system
-// app.use('/api/cache', cacheRoutes); // Cache management and monitoring
-app.use('/api/media', authMiddleware, mediaRoutes); // Upload de arquivos de mídia
+app.use('/api/backup', authMiddleware, backupRoutes);
+app.use('/api/system', authMiddleware, systemRoutes);
+app.use('/api/alerts', authMiddleware, alertsRoutes);
+app.use('/api/analytics', authMiddleware, analyticsRoutes);
+app.use('/api/notifications', authMiddleware, notificationsRoutes);
+app.use('/api/templates', authMiddleware, messageTemplatesRoutes);
+app.use('/api/reports', authMiddleware, reportsRoutes);
+app.use('/api/automation', authMiddleware, automationRoutes);
+app.use('/api/chatwoot', authMiddleware, chatwootRoutes);
+app.use('/api/lead-pages', leadPageRoutes);
+app.use('/api/media', authMiddleware, mediaRoutes);
+app.use('/api/upload', uploadRoutes);
 app.use('/api', authMiddleware, mockRoutes);
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-
-  // Initialize WebSocket service
   websocketService.initialize(server);
-
-  // Initialize alerts monitoring service
   initializeAlertsMonitoring();
-
-  // Initialize backup service
   initializeBackupService();
 });
