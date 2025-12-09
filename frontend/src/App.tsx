@@ -143,7 +143,9 @@ function AppContent() {
       <main className={location.pathname === '/' ? '' : "main-content flex-1 flex flex-col"}>
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/"
+            element={!isAuthenticated ? <LoginPage /> : <Navigate to="/contatos" replace />}
+          />
           <Route
             path="/login"
             element={!isAuthenticated ? <LoginPage /> : <Navigate to="/contatos" replace />}

@@ -24,7 +24,7 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <header className="bg-white border-b border-gray-200 px-6 py-2">
       <div className="flex items-center justify-between">
         {/* Título e Subtítulo */}
         <div className="flex items-center space-x-4">
@@ -33,12 +33,12 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
             {!loading && (
               <img
                 src={settings?.logoUrl || '/assets/default-logo.png'}
-                alt={settings?.companyName || 'Astra Online'}
-                className="h-8 w-auto object-contain"
+                alt={settings?.companyName || 'InfluZap'}
+                className="h-12 w-auto object-contain"
               />
             )}
             {loading && (
-              <div className="h-8 w-24 bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-12 w-32 bg-gray-200 animate-pulse rounded"></div>
             )}
             <div className="border-l border-gray-300 pl-3">
               <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
