@@ -25,6 +25,7 @@ import messageTemplatesRoutes from './routes/messageTemplates';
 import reportsRoutes from './routes/reports';
 import automationRoutes from './routes/automation';
 import chatwootRoutes from './routes/chatwootRoutes';
+import leadPageRoutes from './routes/leadPageRoutes';
 // import integrationsRoutes from './routes/integrations';
 // import cacheRoutes from './routes/cache';
 import { authMiddleware } from './middleware/auth';
@@ -42,8 +43,8 @@ const PORT = process.env.PORT || 3001;
 app.set('trust proxy', 1);
 
 // Criar diretório para uploads
-const uploadDir = process.env.NODE_ENV === 'production' 
-  ? '/app/uploads' 
+const uploadDir = process.env.NODE_ENV === 'production'
+  ? '/app/uploads'
   : './uploads';
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -157,6 +158,7 @@ app.use('/api/templates', authMiddleware, messageTemplatesRoutes); // Message te
 app.use('/api/reports', authMiddleware, reportsRoutes); // Advanced reporting system
 app.use('/api/automation', authMiddleware, automationRoutes); // Automation and workflow system
 app.use('/api/chatwoot', authMiddleware, chatwootRoutes); // Chatwoot integration
+app.use('/api/lead-pages', leadPageRoutes); // Lead Pages (Public & Protected mixed in router)
 // app.use('/api/integrations', integrationsRoutes); // External API integrations system
 // app.use('/api/cache', cacheRoutes); // Cache management and monitoring
 app.use('/api/media', authMiddleware, mediaRoutes); // Upload de arquivos de mídia

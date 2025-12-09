@@ -185,6 +185,24 @@ class ApiService {
     return response.blob();
   }
 
+  // Generic HTTP methods
+  async get<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint);
+  }
+
+  async put<T>(endpoint: string, data: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async delete(endpoint: string): Promise<void> {
+    return this.request<void>(endpoint, {
+      method: 'DELETE',
+    });
+  }
+
   // Bulk operations
   async post(endpoint: string, data: any): Promise<any> {
     return this.request(endpoint, {

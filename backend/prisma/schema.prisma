@@ -35,6 +35,7 @@ model Tenant {
   automationFlows  AutomationFlow[]
   integrations     Integration[]
   auditLogs        AuditLog[]
+  leadPages        LeadPage[]
 
   @@map("tenants")
 }
@@ -150,6 +151,7 @@ model Category {
 
   // Relations
   contacts    Contact[]
+  leadPages   LeadPage[]
   tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
@@ -554,4 +556,30 @@ model AuditLog {
   @@index([action, timestamp])
   @@index([entityType, entityId])
   @@map("audit_logs")
+}
+
+// ============================================================================
+// LEAD CAPTURE PAGES
+// ============================================================================
+
+model LeadPage {
+  id               String   @id @default(uuid())
+  slug             String   @unique
+  title            String
+  headline         String?
+  description      String?
+  primaryColor     String   @default("#000000") @map("primary_color")
+  backgroundColor  String   @default("#ffffff") @map("background_color")
+  backgroundImageUrl String? @map("background_image_url")
+  tenantId         String   @map("tenant_id")
+  categoryId       String   @map("category_id")
+  submissions      Int      @default(0)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("lead_pages")
 }

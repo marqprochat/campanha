@@ -15,6 +15,9 @@ import { LandingPage } from './pages/LandingPage';
 import { SuperAdminPage } from './pages/SuperAdminPage';
 import { SuperAdminDashboard } from './pages/SuperAdminDashboard';
 import { SuperAdminManagerPage } from './pages/SuperAdminManagerPage';
+import { LeadPageList } from './pages/admin/LeadPages/LeadPageList';
+import { LeadPageEditor } from './pages/admin/LeadPages/LeadPageEditor';
+import { LeadCapturePage } from './pages/public/LeadCapturePage';
 import { useGlobalSettings } from './hooks/useGlobalSettings';
 import './styles/globals.css';
 
@@ -136,11 +139,13 @@ function AppContent() {
     );
   }
 
+  const isPublicPage = location.pathname.startsWith('/share/') || location.pathname === '/login' || location.pathname === '/';
+
   return (
     <div className="min-h-screen bg-slate-50">
-      {isAuthenticated && location.pathname !== '/' && <Navigation />}
+      {isAuthenticated && !isPublicPage && <Navigation />}
 
-      <main className={location.pathname === '/' ? '' : "main-content flex-1 flex flex-col"}>
+      <main className={isPublicPage ? '' : "main-content flex-1 flex flex-col"}>
         <Routes>
           {/* Public Routes */}
           <Route path="/"
@@ -216,12 +221,37 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/paginas"
+            element={
+              <ProtectedRoute>
+                <LeadPageList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/paginas/nova"
+            element={
+              <ProtectedRoute>
+                <LeadPageEditor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/paginas/:id"
+            element={
+              <ProtectedRoute>
+                <LeadPageEditor />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/share/:slug" element={<LeadCapturePage />} />
 
           {/* Fallback for unknown routes */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-    </div>
+    </div >
   );
 }
 
