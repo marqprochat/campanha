@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getSettings,
   getPublicSettings,
+  getMetadata,
   updateSettings,
   uploadLogo,
   removeLogo,
@@ -17,6 +18,9 @@ const router = Router();
 
 // GET /api/settings/public - Buscar configurações públicas (sem auth)
 router.get('/public', getPublicSettings);
+
+// GET /api/settings/public/metadata - Buscar metadados para crawlers (WhatsApp, Facebook, etc.)
+router.get('/public/metadata', getMetadata);
 
 // GET /api/settings - Buscar configurações (protegida)
 router.get('/', authMiddleware, getSettings);

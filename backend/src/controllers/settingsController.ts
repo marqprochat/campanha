@@ -167,6 +167,61 @@ export const getPublicSettings = async (req: Request, res: Response) => {
   }
 };
 
+// Get public metadata for crawlers (WhatsApp, Facebook, etc.)
+export const getMetadata = async (req: Request, res: Response) => {
+  try {
+    const settings = await settingsService.getSettings() as any;
+    const title = settings.pageTitle || 'Sistema de Gestão';
+    const description = settings.companyName || 'Sistema de Gestão de Contatos';
+    // Ensure absolute URLs if possible, or relative to the request host
+    // Assuming uploads are served from /api/uploads, we need the full URL
+    // In many cases, crawlers need absolute URLs. We try to construct it.
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    const baseUrl = `${protocol}://${host}`;
+
+    const logoUrl = settings.logoUrl
+      ? (settings.logoUrl.startsWith('http') ? settings.logoUrl : `${baseUrl}${settings.logoUrl}`)
+      : `${baseUrl}/api/uploads/default_icon.png`; // Fallback image
+
+    const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>${title}</title>
+    <meta name="description" content="${description}">
+    
+    <!-- Open Graph / Facebook / WhatsApp -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="${baseUrl}/">
+    <meta property="og:title" content="${title}">
+    <meta property="og:description" content="${description}">
+    <meta property="og:image" content="${logoUrl}">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="${baseUrl}/">
+    <meta property="twitter:title" content="${title}">
+    <meta property="twitter:description" content="${description}">
+    <meta property="twitter:image" content="${logoUrl}">
+    
+    <!-- Redirect users to the main app if they somehow land here directly -->
+    <meta http-equiv="refresh" content="0;url=/">
+</head>
+<body>
+    <script>window.location.href = '/';</script>
+</body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  } catch (error) {
+    console.error('Erro ao gerar metadados:', error);
+    res.status(500).send('Erro interno do servidor');
+  }
+};
+
 // Update settings
 export const updateSettings = async (req: AuthenticatedRequest, res: Response) => {
   try {
