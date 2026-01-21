@@ -161,10 +161,12 @@ ALLOWED_ORIGINS=https://seudominio.com
 
 ### Rede Docker Interna
 - Todos os serviços do mesmo projeto compartilham uma rede Docker
-- Serviços se comunicam pelo **nome do serviço** como hostname:
-  - Frontend chama Backend: `http://backend:3001`
-  - Backend chama Postgres: `postgres:5432`
-  - Backend chama Redis: `redis:6379`
+- Serviços se comunicam pelo **nome do serviço prefixado com o projeto**:
+  - Exemplo: projeto `apps` e serviço `backend` → hostname `apps_backend`
+  - Frontend chama Backend: `http://apps_backend:3001`
+  - Backend chama Postgres: `apps_postgres:5432`
+
+> **💡 DICA DE OURO**: Verifique a variável `DATABASE_URL` do backend. Se ela usa `apps_postgres`, então o padrão é `[projeto]_[serviço]`.
 
 ### Nginx (Dentro do Frontend)
 - O Nginx dentro do container frontend:
