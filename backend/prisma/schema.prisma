@@ -562,6 +562,7 @@ model AuditLog {
 // LEAD CAPTURE PAGES
 // ============================================================================
 
+
 model LeadPage {
   id               String   @id @default(uuid())
   slug             String   @unique
@@ -582,4 +583,57 @@ model LeadPage {
 
   @@index([tenantId])
   @@map("lead_pages")
+}
+
+// ============================================================================
+// WHATSAPP GROUP MANAGEMENT
+// ============================================================================
+
+model WhatsappGroup {
+  id                  String   @id @default(uuid())
+  name                String
+  jid                 String   @unique
+  inviteCode          String?  @map("invite_code")
+  inviteLink          String?  @map("invite_link")
+  capacity            Int      @default(1023)
+  currentParticipants Int      @default(0) @map("current_participants")
+  status              String   @default("ACTIVE") // ACTIVE, FULL, ARCHIVED
+  instanceName        String   @map("instance_name")
+  
+  tenantId            String   @map("tenant_id")
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Relation to DynamicLink (One active group per dynamic link, but logic handled in service)
+  dynamicLinks        DynamicLink[]
+
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("whatsapp_groups")
+  @@index([tenantId])
+  @@index([instanceName])
+}
+
+model DynamicLink {
+  id                  String   @id @default(uuid())
+  slug                String   @unique // e.g., 'vip-customers'
+  name                String
+  
+  // Configuration for auto-creation
+  baseGroupName       String   @map("base_group_name") // e.g., "VIP Party" -> "VIP Party 1", "VIP Party 2"
+  groupCapacity       Int      @default(1023) @map("group_capacity")
+  instanceName        String   @map("instance_name")
+  
+  // Current active group to redirect to
+  activeGroupId       String?  @map("active_group_id")
+  activeGroup         WhatsappGroup? @relation(fields: [activeGroupId], references: [id])
+  
+  tenantId            String   @map("tenant_id")
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("dynamic_links")
+  @@index([tenantId])
 }

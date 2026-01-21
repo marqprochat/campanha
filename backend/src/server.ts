@@ -28,6 +28,7 @@ import reportsRoutes from './routes/reports';
 import automationRoutes from './routes/automation';
 import chatwootRoutes from './routes/chatwootRoutes';
 import leadPageRoutes from './routes/leadPageRoutes';
+import { groupRoutes } from './routes/groupRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 
 // Services
@@ -125,6 +126,7 @@ app.use('/api/reports', authMiddleware, reportsRoutes);
 app.use('/api/automation', authMiddleware, automationRoutes);
 app.use('/api/chatwoot', authMiddleware, chatwootRoutes);
 app.use('/api/lead-pages', leadPageRoutes);
+app.use('/api/groups', groupRoutes);
 app.use('/api/media', authMiddleware, mediaRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api', authMiddleware, mockRoutes);

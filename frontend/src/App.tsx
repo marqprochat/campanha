@@ -18,6 +18,7 @@ import { SuperAdminManagerPage } from './pages/SuperAdminManagerPage';
 import { LeadPageList } from './pages/admin/LeadPages/LeadPageList';
 import { LeadPageEditor } from './pages/admin/LeadPages/LeadPageEditor';
 import { LeadCapturePage } from './pages/public/LeadCapturePage';
+import { GroupManagementPage } from './pages/GroupManagementPage';
 import { useGlobalSettings } from './hooks/useGlobalSettings';
 import './styles/globals.css';
 
@@ -242,6 +243,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <LeadPageEditor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/grupos"
+            element={
+              <ProtectedRoute>
+                <GroupManagementPage />
               </ProtectedRoute>
             }
           />
