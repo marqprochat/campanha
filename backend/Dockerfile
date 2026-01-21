@@ -33,7 +33,7 @@ RUN chmod +x start.sh && chown nodejs:nodejs start.sh
 RUN chown -R nodejs:nodejs /app/node_modules/@prisma || true
 RUN chmod -R 755 /app/node_modules/@prisma || true
 
-USER nodejs
+# USER nodejs
 
 EXPOSE 3001
 
