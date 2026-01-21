@@ -187,9 +187,21 @@ export const createCampaign = async (req: AuthenticatedRequest, res: Response) =
       sessionWhere.tenantId = req.tenantId;
     }
 
+    console.log(`🔍 Query Session Where:`, JSON.stringify(sessionWhere, null, 2));
+
     const sessions = await prisma.whatsAppSession.findMany({
       where: sessionWhere
     });
+
+    console.log(`📊 Sessões encontradas no banco (${sessions.length}):`, sessions.map(s => `${s.name} (${s.status})`));
+
+    // DEBUG: Listar TODAS as sessões do tenant para ver o que existe
+    if (sessions.length === 0) {
+      const allTenantSessions = await prisma.whatsAppSession.findMany({
+        where: { tenantId: req.tenantId }
+      });
+      console.log(`🐛 DEBUG: Todas as sessões deste tenant no banco:`, allTenantSessions.map(s => `${s.name} (Status: ${s.status})`));
+    }
 
     const invalidSessions: string[] = [];
 
