@@ -168,6 +168,23 @@ ALLOWED_ORIGINS=https://seudominio.com
 
 > **💡 DICA DE OURO**: Verifique a variável `DATABASE_URL` do backend. Se ela usa `apps_postgres`, então o padrão é `[projeto]_[serviço]`.
 
+### 🚑 Alternativa: Usar URL Pública (Garantido)
+
+Se a rede interna estiver dando dor de cabeça (Erro 502), use a URL pública do backend no `nginx.conf`. O tráfego sai para a internet e volta, mas **funciona sempre**.
+
+```nginx
+location /api {
+    # Sua URL pública do backend (pegue na aba Domínios)
+    set $backend "https://apps-campanha-backend.h41tex.easypanel.host";
+    proxy_pass $backend;
+
+    # Obrigatório para HTTPS
+    proxy_ssl_server_name on;
+    proxy_set_header Host apps-campanha-backend.h41tex.easypanel.host;
+    proxy_ssl_verify off;
+}
+```
+
 ### Nginx (Dentro do Frontend)
 - O Nginx dentro do container frontend:
   - Serve arquivos estáticos do React em `/`
