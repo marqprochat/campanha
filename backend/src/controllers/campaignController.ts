@@ -180,8 +180,7 @@ export const createCampaign = async (req: AuthenticatedRequest, res: Response) =
 
     // Verificar se todas as sessões existem e estão ativas (com tenant isolation)
     const sessionWhere: any = {
-      name: { in: sessionNames },
-      status: 'WORKING'
+      name: { in: sessionNames }
     };
 
     if (req.user?.role !== 'SUPERADMIN') {
@@ -192,15 +191,22 @@ export const createCampaign = async (req: AuthenticatedRequest, res: Response) =
       where: sessionWhere
     });
 
-    if (sessions.length === 0) {
-      return res.status(400).json({ error: 'Nenhuma sessão WhatsApp ativa encontrada nas selecionadas' });
+    const invalidSessions: string[] = [];
+
+    // Verificar cada sessão solicitada
+    for (const name of sessionNames) {
+      const session = sessions.find(s => s.name === name);
+
+      if (!session) {
+        invalidSessions.push(`Sessão '${name}' não encontrada (ou não pertence à sua organização)`);
+      } else if (session.status !== 'WORKING') {
+        invalidSessions.push(`Sessão '${name}' não está ativa (Status atual: ${session.status})`);
+      }
     }
 
-    if (sessions.length < sessionNames.length) {
-      const activeSessions = sessions.map(s => s.name);
-      const inactiveSessions = sessionNames.filter((name: string) => !activeSessions.includes(name));
+    if (invalidSessions.length > 0) {
       return res.status(400).json({
-        error: `As seguintes sessões não estão ativas: ${inactiveSessions.join(', ')}`
+        error: `Erro na validação das sessões:\n${invalidSessions.join('\n')}`
       });
     }
 
