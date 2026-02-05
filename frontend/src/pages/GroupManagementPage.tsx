@@ -26,10 +26,10 @@ export function GroupManagementPage() {
         setLoading(true);
         try {
             const data = await groupService.listGroups();
-            setGroups(data);
+            setGroups(data || []);
         } catch (error) {
             console.error('Failed to fetch groups', error);
-            alert('Erro ao buscar grupos');
+            setGroups([]);
         } finally {
             setLoading(false);
         }
@@ -130,7 +130,7 @@ export function GroupManagementPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
-                                        {groups.map(group => (
+                                        {(groups || []).map(group => (
                                             <tr key={group.id}>
                                                 <td className="px-6 py-4 whitespace-nowrap">{group.name}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap">{group.currentParticipants}</td>
@@ -234,7 +234,7 @@ export function GroupManagementPage() {
                             <div className="bg-white p-4 rounded shadow">
                                 <h3 className="font-medium mb-3">Selecione os Grupos</h3>
                                 <div className="max-h-60 overflow-y-auto space-y-2">
-                                    {groups.map(group => (
+                                    {(groups || []).map(group => (
                                         <label key={group.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
                                             <input
                                                 type="checkbox"
