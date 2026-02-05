@@ -1,8 +1,31 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, WhatsappGroup, DynamicLink } from '@prisma/client';
 import { evolutionApiService } from './evolutionApiService';
-import { sendMessageViaEvolution } from './evolutionMessageService';
 
 const prisma = new PrismaClient();
+
+interface CreateGroupParams {
+    name: string;
+    instanceName: string;
+    tenantId: string;
+    capacity?: number;
+    initialParticipants?: string[];
+}
+
+interface CreateDynamicLinkParams {
+    slug: string;
+    name: string;
+    baseGroupName: string;
+    instanceName: string;
+    tenantId: string;
+    groupCapacity?: number;
+}
+
+interface BroadcastMessage {
+    text?: string;
+    image?: { url: string };
+    caption?: string;
+    video?: { url: string };
+}
 
 export class GroupService {
     private static instance: GroupService;
@@ -14,230 +37,346 @@ export class GroupService {
         return GroupService.instance;
     }
 
-    // --- Group Management ---
+    // ============================================================================
+    // GROUP CRUD
+    // ============================================================================
 
-    async createGroup({
-        tenantId,
-        instanceName,
-        groupName,
-        participants,
-        dynamicLinkId
-    }: {
-        tenantId: string;
-        instanceName: string;
-        groupName: string;
-        participants: string[];
-        dynamicLinkId?: string;
-    }) {
-        // 1. Create in Evolution API
-        // Evolution API creates and returns metadata. We might need the JID.
-        const evoResponse = await evolutionApiService.createGroup(instanceName, groupName, participants);
-        console.log('Evolution Create Group Response:', evoResponse);
+    async createGroup(params: CreateGroupParams): Promise<WhatsappGroup> {
+        const { name, instanceName, tenantId, capacity = 1023, initialParticipants = [] } = params;
 
-        // Assuming evoResponse contains the group JID.
-        // Structure might vary, we need to adapt based on actual response.
-        // Usually it returns { participants: [...], groupJid: '...' } or similar.
-        const groupJid = evoResponse.groupJid || evoResponse.id || evoResponse.gid;
+        console.log(`📱 Creating group '${name}' on instance '${instanceName}'`);
 
+        // 1. Create group via Evolution API
+        const apiResult = await evolutionApiService.createGroup(instanceName, name, initialParticipants);
+        console.log('📱 Evolution API createGroup result:', JSON.stringify(apiResult, null, 2));
+
+        // The response structure may vary, typically { groupMetadata: { id: 'xxx@g.us', ... } }
+        const groupJid = apiResult.groupMetadata?.id || apiResult.id;
         if (!groupJid) {
-            throw new Error('Failed to get Group JID from Evolution API response');
+            throw new Error('Failed to create group: No JID returned from Evolution API');
         }
 
-        // 2. Get Invite Code/Link
-        let inviteLink = '';
+        // 2. Get the invite code
         const inviteCode = await evolutionApiService.getGroupInviteCode(instanceName, groupJid);
-        if (inviteCode) {
-            inviteLink = `https://chat.whatsapp.com/${inviteCode}`;
-        }
+        const inviteLink = inviteCode ? `https://chat.whatsapp.com/${inviteCode}` : null;
 
-        // 3. Save to Database
+        // 3. Create database record
         const group = await prisma.whatsappGroup.create({
             data: {
-                name: groupName,
+                name,
                 jid: groupJid,
-                instanceName,
-                tenantId,
                 inviteCode,
                 inviteLink,
-                currentParticipants: participants.length, // Initial count
-                // capacity default is 1023
+                capacity,
+                currentParticipants: initialParticipants.length + 1, // +1 for the bot itself
+                instanceName,
+                tenantId,
+                status: 'ACTIVE'
             }
         });
 
-        // 4. If associated with a Dynamic Link, update it if needed
-        if (dynamicLinkId) {
-            // Connect specifically or logic handled elsewhere
-        }
-
+        console.log(`✅ Group '${name}' created with JID: ${groupJid}`);
         return group;
     }
 
-    async listGroups(tenantId: string) {
-        return await prisma.whatsappGroup.findMany({
+    async listGroups(tenantId: string): Promise<WhatsappGroup[]> {
+        return prisma.whatsappGroup.findMany({
             where: { tenantId },
             orderBy: { createdAt: 'desc' }
         });
     }
 
-    async syncGroupsFromEvolution(tenantId: string, instanceName: string) {
-        const evoGroups = await evolutionApiService.fetchAllGroups(instanceName);
-        // Upsert groups into DB
-        for (const grp of evoGroups) {
-            // grp structure depends on evolution version
-            const jid = grp.id || grp.jid;
-            const subject = grp.subject || grp.name;
-            const participantCount = grp.participants ? grp.participants.length : 0;
-
-            if (!jid) continue;
-
-            await prisma.whatsappGroup.upsert({
-                where: { jid },
-                update: {
-                    name: subject,
-                    currentParticipants: participantCount,
-                    // Don't overwrite instanceName if it might be different, but usually matches
-                },
-                create: {
-                    jid,
-                    name: subject,
-                    currentParticipants: participantCount,
-                    instanceName,
-                    tenantId
-                }
-            });
-        }
-    }
-
-    // --- Dynamic Linking & Auto-Scaling ---
-
-    async createDynamicLink(tenantId: string, data: {
-        slug: string,
-        name: string,
-        baseGroupName: string,
-        groupCapacity: number,
-        instanceName: string
-    }) {
-        return await prisma.dynamicLink.create({
-            data: {
-                tenantId,
-                ...data
-            }
+    async getGroup(id: string): Promise<WhatsappGroup | null> {
+        return prisma.whatsappGroup.findUnique({
+            where: { id }
         });
     }
 
-    async getDynamicLinkBySlug(slug: string) {
-        return await prisma.dynamicLink.findUnique({
+    async updateGroupParticipants(groupId: string, count: number): Promise<WhatsappGroup> {
+        const group = await prisma.whatsappGroup.update({
+            where: { id: groupId },
+            data: {
+                currentParticipants: count,
+                status: count >= 1023 ? 'FULL' : 'ACTIVE'
+            }
+        });
+        return group;
+    }
+
+    async syncGroupFromApi(instanceName: string, groupJid: string, tenantId: string): Promise<WhatsappGroup | null> {
+        try {
+            const groupInfo = await evolutionApiService.getGroupInfo(instanceName, groupJid);
+            if (!groupInfo) return null;
+
+            // Update existing or create new
+            const existing = await prisma.whatsappGroup.findUnique({ where: { jid: groupJid } });
+
+            const participantCount = groupInfo.participants?.length || 0;
+            const inviteCode = await evolutionApiService.getGroupInviteCode(instanceName, groupJid);
+            const inviteLink = inviteCode ? `https://chat.whatsapp.com/${inviteCode}` : null;
+
+            if (existing) {
+                return prisma.whatsappGroup.update({
+                    where: { jid: groupJid },
+                    data: {
+                        name: groupInfo.subject || existing.name,
+                        currentParticipants: participantCount,
+                        inviteCode,
+                        inviteLink,
+                        status: participantCount >= existing.capacity ? 'FULL' : 'ACTIVE'
+                    }
+                });
+            } else {
+                return prisma.whatsappGroup.create({
+                    data: {
+                        name: groupInfo.subject || 'Unknown Group',
+                        jid: groupJid,
+                        inviteCode,
+                        inviteLink,
+                        capacity: 1023,
+                        currentParticipants: participantCount,
+                        instanceName,
+                        tenantId,
+                        status: participantCount >= 1023 ? 'FULL' : 'ACTIVE'
+                    }
+                });
+            }
+        } catch (error) {
+            console.error(`Error syncing group ${groupJid}:`, error);
+            return null;
+        }
+    }
+
+    async deleteGroup(id: string): Promise<void> {
+        await prisma.whatsappGroup.delete({ where: { id } });
+    }
+
+    // ============================================================================
+    // DYNAMIC LINK MANAGEMENT
+    // ============================================================================
+
+    async createDynamicLink(params: CreateDynamicLinkParams): Promise<DynamicLink> {
+        const { slug, name, baseGroupName, instanceName, tenantId, groupCapacity = 1023 } = params;
+
+        console.log(`🔗 Creating dynamic link '${slug}' for groups named '${baseGroupName}'`);
+
+        // Create the first group for this dynamic link
+        const firstGroup = await this.createGroup({
+            name: `${baseGroupName} 1`,
+            instanceName,
+            tenantId,
+            capacity: groupCapacity
+        });
+
+        // Create the dynamic link pointing to this group
+        const dynamicLink = await prisma.dynamicLink.create({
+            data: {
+                slug,
+                name,
+                baseGroupName,
+                groupCapacity,
+                instanceName,
+                tenantId,
+                activeGroupId: firstGroup.id
+            }
+        });
+
+        console.log(`✅ Dynamic link '${slug}' created, pointing to group '${firstGroup.name}'`);
+        return dynamicLink;
+    }
+
+    async listDynamicLinks(tenantId: string): Promise<DynamicLink[]> {
+        return prisma.dynamicLink.findMany({
+            where: { tenantId },
+            include: { activeGroup: true },
+            orderBy: { createdAt: 'desc' }
+        });
+    }
+
+    async getDynamicLink(id: string): Promise<DynamicLink | null> {
+        return prisma.dynamicLink.findUnique({
+            where: { id },
+            include: { activeGroup: true }
+        });
+    }
+
+    async getDynamicLinkBySlug(slug: string): Promise<DynamicLink | null> {
+        return prisma.dynamicLink.findUnique({
             where: { slug },
             include: { activeGroup: true }
         });
     }
 
-    async getRedirectLink(slug: string): Promise<string> {
+    async deleteDynamicLink(id: string): Promise<void> {
+        await prisma.dynamicLink.delete({ where: { id } });
+    }
+
+    // ============================================================================
+    // ROTATE GROUP LOGIC (Auto-scaling)
+    // ============================================================================
+
+    async rotateGroupIfNeeded(dynamicLinkId: string): Promise<WhatsappGroup | null> {
         const dynamicLink = await prisma.dynamicLink.findUnique({
-            where: { slug },
+            where: { id: dynamicLinkId },
             include: { activeGroup: true }
         });
 
         if (!dynamicLink) {
-            throw new Error('Link not found');
+            throw new Error('Dynamic link not found');
         }
 
-        // Check if we need to rotate/create a new group
-        let activeGroup = dynamicLink.activeGroup;
+        const activeGroup = dynamicLink.activeGroup;
 
-        if (!activeGroup || this.isGroupFull(activeGroup, dynamicLink.groupCapacity)) {
-            activeGroup = await this.rotateGroup(dynamicLink);
+        // If no active group, create the first one
+        if (!activeGroup) {
+            const newGroup = await this.createGroup({
+                name: `${dynamicLink.baseGroupName} 1`,
+                instanceName: dynamicLink.instanceName,
+                tenantId: dynamicLink.tenantId,
+                capacity: dynamicLink.groupCapacity
+            });
+
+            await prisma.dynamicLink.update({
+                where: { id: dynamicLinkId },
+                data: { activeGroupId: newGroup.id }
+            });
+
+            return newGroup;
         }
 
-        // Return the invite link of the valid active group
-        if (!activeGroup.inviteLink) {
-            // Try to fetch it again if missing
-            const code = await evolutionApiService.getGroupInviteCode(activeGroup.instanceName, activeGroup.jid);
-            if (code) {
-                const link = `https://chat.whatsapp.com/${code}`;
-                await prisma.whatsappGroup.update({
-                    where: { id: activeGroup.id },
-                    data: { inviteCode: code, inviteLink: link }
-                });
-                return link;
-            }
-            throw new Error('Active group has no invite link available');
+        // Sync the current participant count from API
+        const groupInfo = await evolutionApiService.getGroupInfo(dynamicLink.instanceName, activeGroup.jid);
+        const currentParticipants = groupInfo?.participants?.length || activeGroup.currentParticipants;
+
+        // Update the database
+        await prisma.whatsappGroup.update({
+            where: { id: activeGroup.id },
+            data: { currentParticipants }
+        });
+
+        // Check if group is full
+        if (currentParticipants >= dynamicLink.groupCapacity) {
+            console.log(`📊 Group '${activeGroup.name}' is full (${currentParticipants}/${dynamicLink.groupCapacity}). Creating new group...`);
+
+            // Mark current as FULL
+            await prisma.whatsappGroup.update({
+                where: { id: activeGroup.id },
+                data: { status: 'FULL' }
+            });
+
+            // Count existing groups with this base name to get the next number
+            const existingGroups = await prisma.whatsappGroup.count({
+                where: {
+                    tenantId: dynamicLink.tenantId,
+                    name: { startsWith: dynamicLink.baseGroupName }
+                }
+            });
+
+            // Create a new group
+            const newGroup = await this.createGroup({
+                name: `${dynamicLink.baseGroupName} ${existingGroups + 1}`,
+                instanceName: dynamicLink.instanceName,
+                tenantId: dynamicLink.tenantId,
+                capacity: dynamicLink.groupCapacity
+            });
+
+            // Update the dynamic link to point to the new group
+            await prisma.dynamicLink.update({
+                where: { id: dynamicLinkId },
+                data: { activeGroupId: newGroup.id }
+            });
+
+            console.log(`✅ Rotated to new group '${newGroup.name}'`);
+            return newGroup;
+        }
+
+        return activeGroup;
+    }
+
+    async getActiveInviteLink(slug: string): Promise<string | null> {
+        const dynamicLink = await this.getDynamicLinkBySlug(slug);
+        if (!dynamicLink) {
+            return null;
+        }
+
+        // Ensure we have an active, non-full group
+        const activeGroup = await this.rotateGroupIfNeeded(dynamicLink.id);
+        if (!activeGroup) {
+            return null;
         }
 
         return activeGroup.inviteLink;
     }
 
-    private isGroupFull(group: any, limit: number): boolean {
-        // 1. Check DB count (optimistic)
-        if (group.currentParticipants >= limit) return true;
+    // ============================================================================
+    // BROADCAST MESSAGING
+    // ============================================================================
 
-        // 2. Ideally, check real-time with Evolution if critical, 
-        //    but for performance we might rely on webhooks or periodic syncs.
-        //    For now, trust DB.
-        return false;
-    }
+    async broadcastMessage(
+        instanceName: string,
+        groupIds: string[],
+        message: BroadcastMessage
+    ): Promise<{ success: string[]; failed: string[] }> {
+        const results = { success: [] as string[], failed: [] as string[] };
 
-    private async rotateGroup(dynamicLink: any): Promise<any> {
-        // Create a new group with incremented name
-        // Logic to find next number: "Group Name 1" -> "Group Name 2"
-
-        // Find how many groups this dynamic link has used? 
-        // Easier: Count groups with name starting with baseName
-        const count = await prisma.whatsappGroup.count({
-            where: {
-                tenantId: dynamicLink.tenantId,
-                name: { startsWith: dynamicLink.baseGroupName }
-            }
+        // Fetch groups to get their JIDs
+        const groups = await prisma.whatsappGroup.findMany({
+            where: { id: { in: groupIds } }
         });
 
-        const nextNumber = count + 1;
-        const newGroupName = `${dynamicLink.baseGroupName} ${nextNumber}`;
-
-        const newGroup = await this.createGroup({
-            tenantId: dynamicLink.tenantId,
-            instanceName: dynamicLink.instanceName,
-            groupName: newGroupName,
-            participants: [], // Empty initially? Or add the admin/system number?
-            dynamicLinkId: dynamicLink.id
-        });
-
-        // Update Dynamic Link to point to this new group
-        await prisma.dynamicLink.update({
-            where: { id: dynamicLink.id },
-            data: { activeGroupId: newGroup.id }
-        });
-
-        // Also, we might want to link this group to the DynamicLink in DB if we added a relation field inverse?
-        // In schema: DynamicLink has activeGroupId. 
-        // WhatsappGroup has dynamicLinks[] (many-to-many potentially or one-to-many inverse).
-        // Specifically `activeGroup` is a relation.
-
-        // Add relation to the list of "controlled groups" if we had that relation explicit.
-        // The current schema has `dynamicLinks DynamicLink[]` on WhatsappGroup, 
-        // implying a group can belong to multiple dynamic links or be the active one.
-        // But we don't have a "history" relation, only "activeGroup".
-        // That's fine for now.
-
-        return newGroup;
-    }
-
-    // --- Broadcast ---
-
-    async broadcastMessage(instanceName: string, groupJids: string[], message: any) {
-        const results = [];
-        for (const jid of groupJids) {
+        for (const group of groups) {
             try {
-                console.log(`Broadcasting to group ${jid} on instance ${instanceName}`);
-                await evolutionApiService.sendGroupMessage(instanceName, jid, message);
-                results.push({ jid, status: 'success' });
-            } catch (e: any) {
-                console.error(`Failed to broadcast to ${jid}:`, e);
-                results.push({ jid, status: 'failed', error: e.message });
+                await evolutionApiService.sendGroupMessage(instanceName, group.jid, message);
+                results.success.push(group.id);
+                console.log(`✅ Message sent to group '${group.name}'`);
+
+                // Small delay between messages to avoid rate limiting
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (error) {
+                console.error(`❌ Failed to send message to group '${group.name}':`, error);
+                results.failed.push(group.id);
             }
-            // Small delay to prevent rate limit issues
-            await new Promise(r => setTimeout(r, 1000));
         }
+
         return results;
+    }
+
+    async broadcastToAllGroups(
+        tenantId: string,
+        instanceName: string,
+        message: BroadcastMessage
+    ): Promise<{ success: string[]; failed: string[] }> {
+        const groups = await prisma.whatsappGroup.findMany({
+            where: { tenantId, status: 'ACTIVE' },
+            select: { id: true }
+        });
+
+        return this.broadcastMessage(
+            instanceName,
+            groups.map(g => g.id),
+            message
+        );
+    }
+
+    // ============================================================================
+    // SYNC ALL GROUPS FROM EVOLUTION API
+    // ============================================================================
+
+    async syncAllGroupsFromApi(instanceName: string, tenantId: string): Promise<WhatsappGroup[]> {
+        console.log(`🔄 Syncing all groups from instance '${instanceName}'`);
+
+        const apiGroups = await evolutionApiService.fetchAllGroups(instanceName);
+        const syncedGroups: WhatsappGroup[] = [];
+
+        for (const apiGroup of apiGroups) {
+            const synced = await this.syncGroupFromApi(instanceName, apiGroup.id, tenantId);
+            if (synced) {
+                syncedGroups.push(synced);
+            }
+        }
+
+        console.log(`✅ Synced ${syncedGroups.length} groups from Evolution API`);
+        return syncedGroups;
     }
 }
 

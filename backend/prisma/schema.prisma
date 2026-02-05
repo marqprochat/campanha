@@ -36,6 +36,8 @@ model Tenant {
   integrations     Integration[]
   auditLogs        AuditLog[]
   leadPages        LeadPage[]
+  whatsappGroups   WhatsappGroup[]
+  dynamicLinks     DynamicLink[]
 
   @@map("tenants")
 }

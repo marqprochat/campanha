@@ -200,7 +200,7 @@ export class EvolutionApiService {
   async getGroupInviteCode(instanceName: string, groupJid: string): Promise<string | null> {
     try {
       const response = await this.makeRequest(`/group/inviteCode/${instanceName}?groupJid=${groupJid}`);
-      const data = await response.json();
+      const data = await response.json() as { inviteCode?: string };
       console.log(`Invite code response for ${groupJid}:`, data);
 
       // Evolution returns something like { inviteCode: "..." } or just the string depending on version

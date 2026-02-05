@@ -39,9 +39,9 @@ export function GroupManagementPage() {
         if (!newGroupName || !instanceName) return alert('Preencha os campos obrigatórios');
         try {
             await groupService.createGroup({
-                groupName: newGroupName,
+                name: newGroupName,
                 instanceName,
-                participants: initialParticipants.split(',').map(p => p.trim()).filter(p => p)
+                initialParticipants: initialParticipants.split(',').map(p => p.trim()).filter(p => p)
             });
             alert('Grupo criado!');
             setIsCreateModalOpen(false);
@@ -59,7 +59,7 @@ export function GroupManagementPage() {
         try {
             const results = await groupService.broadcast({
                 instanceName,
-                groupJids: selectedGroups,
+                groupIds: selectedGroups,
                 message: { text: broadcastMessage }
             });
             setBroadcastStatus(results);
@@ -70,8 +70,8 @@ export function GroupManagementPage() {
         }
     };
 
-    const toggleGroupSelection = (jid: string) => {
-        setSelectedGroups(prev => prev.includes(jid) ? prev.filter(g => g !== jid) : [...prev, jid]);
+    const toggleGroupSelection = (id: string) => {
+        setSelectedGroups(prev => prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]);
     };
 
     return (
@@ -238,8 +238,8 @@ export function GroupManagementPage() {
                                         <label key={group.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
                                             <input
                                                 type="checkbox"
-                                                checked={selectedGroups.includes(group.jid)}
-                                                onChange={() => toggleGroupSelection(group.jid)}
+                                                checked={selectedGroups.includes(group.id)}
+                                                onChange={() => toggleGroupSelection(group.id)}
                                                 className="rounded text-blue-600 focus:ring-blue-500"
                                             />
                                             <span className="text-sm">{group.name}</span>

@@ -1,19 +1,36 @@
 import { Router } from 'express';
-import { groupController } from '../controllers/groupController';
 import { authMiddleware } from '../middleware/auth';
+import * as groupController from '../controllers/groupController';
 
 const router = Router();
 
-// Public Route
-router.get('/invite/:slug', groupController.handleInviteLink);
+// ============================================================================
+// PROTECTED ROUTES (require authentication)
+// ============================================================================
 
-// Protected Routes
-router.use(authMiddleware);
+// Groups
+router.post('/groups', authMiddleware, groupController.createGroup);
+router.get('/groups', authMiddleware, groupController.listGroups);
+router.get('/groups/:id', authMiddleware, groupController.getGroup);
+router.delete('/groups/:id', authMiddleware, groupController.deleteGroup);
+router.post('/groups/sync', authMiddleware, groupController.syncGroups);
 
-router.post('/', groupController.create);
-router.get('/', groupController.list);
-router.post('/sync', groupController.sync);
-router.post('/dynamic-link', groupController.createDynamicLink);
-router.post('/broadcast', groupController.broadcast);
+// Dynamic Links
+router.post('/dynamic-links', authMiddleware, groupController.createDynamicLink);
+router.get('/dynamic-links', authMiddleware, groupController.listDynamicLinks);
+router.get('/dynamic-links/:id', authMiddleware, groupController.getDynamicLink);
+router.delete('/dynamic-links/:id', authMiddleware, groupController.deleteDynamicLink);
 
-export { router as groupRoutes };
+// Broadcast
+router.post('/broadcast', authMiddleware, groupController.broadcastMessage);
+router.post('/broadcast/all', authMiddleware, groupController.broadcastToAll);
+
+// ============================================================================
+// PUBLIC ROUTES (no authentication required)
+// ============================================================================
+
+// Public invite link redirect - this is the "magic link" that auto-rotates groups
+router.get('/invite/:slug', groupController.handleInviteRedirect);
+
+export const groupRoutes = router;
+export default router;
