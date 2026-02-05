@@ -14,6 +14,13 @@ export interface WhatsappGroup {
     updatedAt: string;
 }
 
+export interface WhatsAppInstance {
+    name: string;
+    displayName?: string;
+    status: string;
+    provider: string;
+}
+
 export interface DynamicLink {
     id: string;
     slug: string;
@@ -32,18 +39,15 @@ export const groupService = {
     // GROUPS
     // ============================================================================
     createGroup: async (data: { name: string; instanceName: string; capacity?: number; initialParticipants?: string[] }) => {
-        const response = await api.post('/groups/groups', data);
-        return response.data;
+        return api.post('/groups/groups', data);
     },
 
     listGroups: async () => {
-        const response = await api.get<WhatsappGroup[]>('/groups/groups');
-        return response.data;
+        return api.get<WhatsappGroup[]>('/groups/groups');
     },
 
     getGroup: async (id: string) => {
-        const response = await api.get<WhatsappGroup>(`/groups/groups/${id}`);
-        return response.data;
+        return api.get<WhatsappGroup>(`/groups/groups/${id}`);
     },
 
     deleteGroup: async (id: string) => {
@@ -51,26 +55,22 @@ export const groupService = {
     },
 
     syncGroups: async (instanceName: string) => {
-        const response = await api.post('/groups/groups/sync', { instanceName });
-        return response.data;
+        return api.post('/groups/groups/sync', { instanceName });
     },
 
     // ============================================================================
     // DYNAMIC LINKS
     // ============================================================================
     createDynamicLink: async (data: { slug: string; name: string; baseGroupName: string; instanceName: string; groupCapacity?: number }) => {
-        const response = await api.post('/groups/dynamic-links', data);
-        return response.data;
+        return api.post('/groups/dynamic-links', data);
     },
 
     listDynamicLinks: async () => {
-        const response = await api.get<DynamicLink[]>('/groups/dynamic-links');
-        return response.data;
+        return api.get<DynamicLink[]>('/groups/dynamic-links');
     },
 
     getDynamicLink: async (id: string) => {
-        const response = await api.get<DynamicLink>(`/groups/dynamic-links/${id}`);
-        return response.data;
+        return api.get<DynamicLink>(`/groups/dynamic-links/${id}`);
     },
 
     deleteDynamicLink: async (id: string) => {
@@ -81,13 +81,18 @@ export const groupService = {
     // BROADCAST
     // ============================================================================
     broadcast: async (data: { instanceName: string; groupIds: string[]; message: { text?: string; image?: { url: string }; caption?: string } }) => {
-        const response = await api.post('/groups/broadcast', data);
-        return response.data;
+        return api.post('/groups/broadcast', data);
     },
 
     broadcastToAll: async (data: { instanceName: string; message: { text?: string; image?: { url: string }; caption?: string } }) => {
-        const response = await api.post('/groups/broadcast/all', data);
-        return response.data;
+        return api.post('/groups/broadcast/all', data);
+    },
+
+    // ============================================================================
+    // INSTANCES
+    // ============================================================================
+    listInstances: async () => {
+        return api.get<WhatsAppInstance[]>('/waha/sessions');
     },
 
     // ============================================================================

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
-import { groupService, WhatsappGroup } from '../services/groupService';
+import { groupService, WhatsappGroup, WhatsAppInstance } from '../services/groupService';
 
 export function GroupManagementPage() {
     const [activeTab, setActiveTab] = useState<'groups' | 'links' | 'broadcast'>('groups');
     const [groups, setGroups] = useState<WhatsappGroup[]>([]);
+    const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
     const [loading, setLoading] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -20,6 +21,7 @@ export function GroupManagementPage() {
 
     useEffect(() => {
         fetchGroups();
+        fetchInstances();
     }, []);
 
     const fetchGroups = async () => {
@@ -35,6 +37,23 @@ export function GroupManagementPage() {
         }
     };
 
+    const fetchInstances = async () => {
+        try {
+            const data = await groupService.listInstances();
+            setInstances(data || []);
+            // Auto-select first working instance if none selected
+            if (!instanceName && data && data.length > 0) {
+                const firstWorking = data.find(i => i.status === 'WORKING');
+                if (firstWorking) {
+                    setInstanceName(firstWorking.name);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch instances', error);
+            // Non-blocking error
+        }
+    };
+
     const handleCreateGroup = async () => {
         if (!newGroupName || !instanceName) return alert('Preencha os campos obrigatórios');
         try {
@@ -45,6 +64,8 @@ export function GroupManagementPage() {
             });
             alert('Grupo criado!');
             setIsCreateModalOpen(false);
+            setNewGroupName('');
+            setInitialParticipants('');
             fetchGroups();
         } catch (error) {
             console.error(error);
@@ -54,7 +75,7 @@ export function GroupManagementPage() {
 
     const handleBroadcast = async () => {
         if (selectedGroups.length === 0 || !broadcastMessage) return;
-        if (!instanceName) return alert('Defina a instância (pode usar o campo do modal por enquanto)');
+        if (!instanceName) return alert('Defina a instância');
 
         try {
             const results = await groupService.broadcast({
@@ -73,6 +94,8 @@ export function GroupManagementPage() {
     const toggleGroupSelection = (id: string) => {
         setSelectedGroups(prev => prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]);
     };
+
+    const connectedInstances = instances.filter(i => i.status === 'WORKING');
 
     return (
         <>
@@ -186,7 +209,22 @@ export function GroupManagementPage() {
                             </div>
                             <div className="mt-4">
                                 <label className="block text-sm font-medium text-gray-700">Instância Evolution</label>
-                                <input type="text" id="dl-instance" value={instanceName} onChange={e => setInstanceName(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border" placeholder="Nome da instância" />
+                                <select
+                                    id="dl-instance"
+                                    value={instanceName}
+                                    onChange={e => setInstanceName(e.target.value)}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border"
+                                >
+                                    <option value="">Selecione uma instância...</option>
+                                    {connectedInstances.map(instance => (
+                                        <option key={instance.name} value={instance.name}>
+                                            {instance.displayName || instance.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                {connectedInstances.length === 0 && (
+                                    <p className="text-xs text-red-500 mt-1">Nenhuma instância conectada encontrada.</p>
+                                )}
                             </div>
                             <div className="mt-6">
                                 <button
@@ -221,13 +259,21 @@ export function GroupManagementPage() {
                     <div className="space-y-6">
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Instância para Disparo</label>
-                            <input
-                                type="text"
+                            <select
                                 value={instanceName}
                                 onChange={e => setInstanceName(e.target.value)}
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
-                                placeholder="Nome da Instância (ex: principal)"
-                            />
+                            >
+                                <option value="">Selecione uma instância...</option>
+                                {connectedInstances.map(instance => (
+                                    <option key={instance.name} value={instance.name}>
+                                        {instance.displayName || instance.name}
+                                    </option>
+                                ))}
+                            </select>
+                            {connectedInstances.length === 0 && (
+                                <p className="text-xs text-red-500 mt-1">Nenhuma instância conectada encontrada.</p>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -302,13 +348,21 @@ export function GroupManagementPage() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Instância Evolution</label>
-                                <input
-                                    type="text"
+                                <select
                                     value={instanceName}
                                     onChange={e => setInstanceName(e.target.value)}
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
-                                    placeholder="Nome da instância"
-                                />
+                                >
+                                    <option value="">Selecione uma instância...</option>
+                                    {connectedInstances.map(instance => (
+                                        <option key={instance.name} value={instance.name}>
+                                            {instance.displayName || instance.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                {connectedInstances.length === 0 && (
+                                    <p className="text-xs text-red-500 mt-1">Nenhuma instância conectada encontrada.</p>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Participantes Iniciais (opcional)</label>
