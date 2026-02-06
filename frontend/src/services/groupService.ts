@@ -61,7 +61,7 @@ export const groupService = {
     // ============================================================================
     // DYNAMIC LINKS
     // ============================================================================
-    createDynamicLink: async (data: { slug: string; name: string; baseGroupName: string; instanceName: string; groupCapacity?: number }) => {
+    createDynamicLink: async (data: { slug: string; name: string; baseGroupName: string; instanceName: string; groupCapacity?: number; initialParticipants?: string[] }) => {
         return api.post('/groups/dynamic-links', data);
     },
 

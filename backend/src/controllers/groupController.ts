@@ -90,7 +90,7 @@ export async function syncGroups(req: Request, res: Response) {
 
 export async function createDynamicLink(req: Request, res: Response) {
     try {
-        const { slug, name, baseGroupName, instanceName, groupCapacity } = req.body;
+        const { slug, name, baseGroupName, instanceName, groupCapacity, initialParticipants } = req.body;
         const tenantId = (req as any).tenantId;
 
         if (!slug || !name || !baseGroupName || !instanceName) {
@@ -105,7 +105,8 @@ export async function createDynamicLink(req: Request, res: Response) {
             baseGroupName,
             instanceName,
             tenantId,
-            groupCapacity
+            groupCapacity,
+            initialParticipants
         });
 
         res.status(201).json(dynamicLink);

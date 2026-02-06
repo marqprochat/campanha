@@ -212,6 +212,16 @@ export function GroupManagementPage() {
                                     <label className="block text-sm font-medium text-gray-700">Capacidade por Grupo</label>
                                     <input type="number" id="dl-capacity" defaultValue={1000} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border" />
                                 </div>
+                                <div className="col-span-1 md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700">Participantes Iniciais (obrigatório para o 1º grupo)</label>
+                                    <input
+                                        type="text"
+                                        id="dl-participants"
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border"
+                                        placeholder="5511999999999, 5511888888888"
+                                    />
+                                    <p className="mt-1 text-xs text-gray-500">Adicione pelo menos um número para criar o primeiro grupo imediatamente.</p>
+                                </div>
                             </div>
                             <div className="mt-4">
                                 <label className="block text-sm font-medium text-gray-700">Instância Evolution</label>
@@ -239,14 +249,25 @@ export function GroupManagementPage() {
                                         const name = (document.getElementById('dl-name') as HTMLInputElement).value;
                                         const baseGroupName = (document.getElementById('dl-baseName') as HTMLInputElement).value;
                                         const capacity = parseInt((document.getElementById('dl-capacity') as HTMLInputElement).value);
+                                        const participantsStr = (document.getElementById('dl-participants') as HTMLInputElement).value;
 
                                         if (!slug || !name || !baseGroupName || !instanceName) return alert('Preencha os campos obrigatórios (Slug, Nome, Base, Instância)');
 
+                                        const initialParticipants = participantsStr.split(',').map(p => p.trim()).filter(p => p);
+                                        if (initialParticipants.length === 0) {
+                                            return alert('É necessário adicionar pelo menos um participante inicial para criar o primeiro grupo (exigência do WhatsApp).');
+                                        }
+
                                         try {
                                             await groupService.createDynamicLink({
-                                                slug, name, baseGroupName, groupCapacity: capacity, instanceName
+                                                slug, name, baseGroupName, groupCapacity: capacity, instanceName, initialParticipants
                                             });
                                             alert(`Link criado: /invite/${slug}`);
+                                            // Reset fields
+                                            (document.getElementById('dl-slug') as HTMLInputElement).value = '';
+                                            (document.getElementById('dl-name') as HTMLInputElement).value = '';
+                                            (document.getElementById('dl-baseName') as HTMLInputElement).value = '';
+                                            (document.getElementById('dl-participants') as HTMLInputElement).value = '';
                                         } catch (e) {
                                             console.error(e);
                                             alert('Erro ao criar link');
