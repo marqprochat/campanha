@@ -122,6 +122,91 @@ class EvolutionApiService {
         }
         return [];
     }
+    // ============================================================================
+    // GROUP MANAGEMENT
+    // ============================================================================
+    async createGroup(instanceName, groupName, participants) {
+        const requestData = {
+            subject: groupName,
+            participants
+        };
+        console.log(`Creating group '${groupName}' on instance '${instanceName}' with participants:`, participants);
+        const response = await this.makeRequest(`/group/create/${instanceName}`, {
+            method: 'POST',
+            body: JSON.stringify(requestData)
+        });
+        return await response.json();
+    }
+    async getGroupInviteCode(instanceName, groupJid) {
+        try {
+            const response = await this.makeRequest(`/group/inviteCode/${instanceName}?groupJid=${groupJid}`);
+            const data = await response.json();
+            console.log(`Invite code response for ${groupJid}:`, data);
+            // Evolution returns something like { inviteCode: "..." } or just the string depending on version
+            // Adapting based on likely structure
+            if (data && data.inviteCode) {
+                return data.inviteCode;
+            }
+            return null;
+        }
+        catch (error) {
+            console.error(`Error getting invite code for group ${groupJid}:`, error);
+            return null;
+        }
+    }
+    async getGroupInfo(instanceName, groupJid) {
+        try {
+            const response = await this.makeRequest(`/group/findGroup/${instanceName}?groupJid=${groupJid}`);
+            return await response.json();
+        }
+        catch (error) {
+            console.error(`Error getting info for group ${groupJid}:`, error);
+            return null;
+        }
+    }
+    async fetchAllGroups(instanceName) {
+        try {
+            const response = await this.makeRequest(`/group/fetchAllGroups/${instanceName}?getParticipants=false`);
+            const data = await response.json();
+            return Array.isArray(data) ? data : [];
+        }
+        catch (error) {
+            console.error(`Error fetching all groups for ${instanceName}:`, error);
+            return [];
+        }
+    }
+    async sendGroupMessage(instanceName, groupJid, message) {
+        let endpoint = '';
+        let body = {
+            number: groupJid,
+            options: {
+                presence: 'composing',
+                delay: 1200
+            }
+        };
+        if (message.text) {
+            endpoint = `/message/sendText/${instanceName}`;
+            body.text = message.text;
+        }
+        else if (message.image) {
+            endpoint = `/message/sendMedia/${instanceName}`;
+            body.mediatype = 'image';
+            body.media = message.image.url;
+            body.caption = message.caption;
+            body.fileName = 'image.png';
+        }
+        else if (message.video) {
+            endpoint = `/message/sendMedia/${instanceName}`;
+            body.mediatype = 'video';
+            body.media = message.video.url;
+            body.caption = message.caption;
+        }
+        // Add other types as needed
+        return await this.makeRequest(endpoint, {
+            method: 'POST',
+            body: JSON.stringify(body)
+        });
+    }
 }
 exports.EvolutionApiService = EvolutionApiService;
 exports.evolutionApiService = EvolutionApiService.getInstance();

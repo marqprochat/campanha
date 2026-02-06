@@ -41,29 +41,44 @@ const multer_1 = __importDefault(require("multer"));
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const csvImportService_1 = require("../services/csvImportService");
-// Criar diretório temporário se não existir
-const tmpDir = path.join(process.cwd(), 'tmp', 'uploads');
-try {
-    if (!fs.existsSync(tmpDir)) {
-        fs.mkdirSync(tmpDir, { recursive: true });
-        console.log(`✅ Diretório de uploads criado: ${tmpDir}`);
+// Definir diretório temporário
+// Em produção (Docker), usar /app/uploads; em desenvolvimento, usar ./uploads
+const getTmpDir = () => {
+    return process.env.NODE_ENV === 'production'
+        ? '/app/uploads'
+        : path.join(process.cwd(), 'uploads');
+};
+// Função auxiliar para criar diretório de forma segura
+const ensureDirectoryExists = (dir) => {
+    try {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+            console.log(`✅ Diretório criado: ${dir}`);
+        }
+        return true;
     }
-}
-catch (error) {
-    console.error(`❌ Erro ao criar diretório de uploads: ${tmpDir}`, error);
-}
+    catch (error) {
+        console.error(`⚠️ Erro ao criar diretório ${dir}: ${error instanceof Error ? error.message : error}`);
+        return false;
+    }
+};
 // Configurar multer para upload de arquivos
 const storage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
+        const tmpDir = getTmpDir();
         // Garantir que o diretório existe antes de salvar
-        if (!fs.existsSync(tmpDir)) {
-            fs.mkdirSync(tmpDir, { recursive: true });
+        if (ensureDirectoryExists(tmpDir)) {
+            cb(null, tmpDir);
         }
-        cb(null, tmpDir); // Usar diretório temporário relativo ao projeto
+        else {
+            cb(new Error(`Não foi possível acessar diretório: ${tmpDir}`), tmpDir);
+        }
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'import-' + uniqueSuffix + path.extname(file.originalname));
+        const filename = 'import-' + uniqueSuffix + path.extname(file.originalname);
+        console.log(`📄 Arquivo CSV será salvo como: ${filename}`);
+        cb(null, filename);
     }
 });
 const fileFilter = (req, file, cb) => {
@@ -86,9 +101,18 @@ exports.upload = (0, multer_1.default)({
 // Middleware para capturar erros do multer
 const handleMulterError = (err, req, res, next) => {
     if (err instanceof multer_1.default.MulterError) {
-        console.error('❌ Erro do Multer:', err.code, err.message);
+        console.error('❌ Erro do Multer - Código:', err.code);
+        console.error('❌ Erro do Multer - Mensagem:', err.message);
+        let message = err.message;
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            message = 'Arquivo muito grande. Máximo permitido: 5MB';
+        }
+        else if (err.code === 'LIMIT_FILE_COUNT') {
+            message = 'Apenas um arquivo é permitido por vez';
+        }
         return res.status(400).json({
-            error: `Erro ao fazer upload: ${err.message}`
+            error: `Erro ao fazer upload: ${message}`,
+            code: err.code
         });
     }
     else if (err) {

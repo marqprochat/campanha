@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.removeIcon = exports.uploadIcon = exports.removeLogo = exports.removeFavicon = exports.uploadFavicon = exports.uploadLogo = exports.updateSettings = exports.getPublicSettings = exports.getSettings = exports.settingsValidation = void 0;
+exports.removeIcon = exports.uploadIcon = exports.removeLogo = exports.removeFavicon = exports.uploadFavicon = exports.uploadLogo = exports.updateSettings = exports.getMetadata = exports.getPublicSettings = exports.getSettings = exports.settingsValidation = void 0;
 const express_validator_1 = require("express-validator");
 const settingsService_1 = require("../services/settingsService");
 const tenantSettingsService_1 = require("../services/tenantSettingsService");
@@ -162,7 +162,9 @@ const getPublicSettings = async (req, res) => {
             faviconUrl: settings.faviconUrl,
             pageTitle: settings.pageTitle,
             iconUrl: settings.iconUrl,
-            companyName: settings.companyName
+            companyName: settings.companyName,
+            primaryColor: settings.primaryColor || '#21975f',
+            logoUrl: settings.logoUrl
         });
     }
     catch (error) {
@@ -171,6 +173,59 @@ const getPublicSettings = async (req, res) => {
     }
 };
 exports.getPublicSettings = getPublicSettings;
+// Get public metadata for crawlers (WhatsApp, Facebook, etc.)
+const getMetadata = async (req, res) => {
+    try {
+        const settings = await settingsService_1.settingsService.getSettings();
+        const title = settings.pageTitle || 'Sistema de Gestão';
+        const description = settings.companyName || 'Sistema de Gestão de Contatos';
+        // Ensure absolute URLs if possible, or relative to the request host
+        // Assuming uploads are served from /api/uploads, we need the full URL
+        // In many cases, crawlers need absolute URLs. We try to construct it.
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+        const host = req.headers['x-forwarded-host'] || req.get('host');
+        const baseUrl = `${protocol}://${host}`;
+        const logoUrl = settings.logoUrl
+            ? (settings.logoUrl.startsWith('http') ? settings.logoUrl : `${baseUrl}${settings.logoUrl}`)
+            : `${baseUrl}/api/uploads/default_icon.png`; // Fallback image
+        const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>${title}</title>
+    <meta name="description" content="${description}">
+    
+    <!-- Open Graph / Facebook / WhatsApp -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="${baseUrl}/">
+    <meta property="og:title" content="${title}">
+    <meta property="og:description" content="${description}">
+    <meta property="og:image" content="${logoUrl}">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="${baseUrl}/">
+    <meta property="twitter:title" content="${title}">
+    <meta property="twitter:description" content="${description}">
+    <meta property="twitter:image" content="${logoUrl}">
+    
+    <!-- Redirect users to the main app if they somehow land here directly -->
+    <meta http-equiv="refresh" content="0;url=/">
+</head>
+<body>
+    <script>window.location.href = '/';</script>
+</body>
+</html>`;
+        res.setHeader('Content-Type', 'text/html');
+        res.send(html);
+    }
+    catch (error) {
+        console.error('Erro ao gerar metadados:', error);
+        res.status(500).send('Erro interno do servidor');
+    }
+};
+exports.getMetadata = getMetadata;
 // Update settings
 const updateSettings = async (req, res) => {
     try {
@@ -178,7 +233,7 @@ const updateSettings = async (req, res) => {
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
         }
-        const { wahaHost, wahaApiKey, evolutionHost, evolutionApiKey, quepasaUrl, quepasaLogin, quepasaPassword, companyName, pageTitle, openaiApiKey, groqApiKey, chatwootUrl, chatwootAccountId, chatwootApiToken, tenantId } = req.body;
+        const { wahaHost, wahaApiKey, evolutionHost, evolutionApiKey, quepasaUrl, quepasaLogin, quepasaPassword, companyName, pageTitle, openaiApiKey, groqApiKey, chatwootUrl, chatwootAccountId, chatwootApiToken, tenantId, primaryColor } = req.body;
         // Atualizar configurações globais (WAHA, Evolution, Quepasa são globais)
         const globalSettings = await settingsService_1.settingsService.updateSettings({
             wahaHost,
@@ -189,7 +244,8 @@ const updateSettings = async (req, res) => {
             quepasaLogin,
             quepasaPassword,
             companyName,
-            pageTitle
+            pageTitle,
+            primaryColor
         });
         // Para configurações AI e Chatwoot, usar tenantId do usuário, ou parâmetro tenantId para SUPERADMIN
         let effectiveTenantId = req.tenantId;

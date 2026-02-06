@@ -6,6 +6,8 @@ const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 // GET /api/settings/public - Buscar configurações públicas (sem auth)
 router.get('/public', settingsController_1.getPublicSettings);
+// GET /api/settings/public/metadata - Buscar metadados para crawlers (WhatsApp, Facebook, etc.)
+router.get('/public/metadata', settingsController_1.getMetadata);
 // GET /api/settings - Buscar configurações (protegida)
 router.get('/', auth_1.authMiddleware, settingsController_1.getSettings);
 // PUT /api/settings - Atualizar configurações (protegida)

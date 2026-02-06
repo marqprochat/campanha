@@ -14,7 +14,10 @@ exports.campaignValidation = [
     (0, express_validator_1.body)('messageContent').notEmpty().withMessage('Conteúdo da mensagem é obrigatório'),
     (0, express_validator_1.body)('randomDelay').isInt({ min: 0 }).withMessage('Delay deve ser um número positivo'),
     (0, express_validator_1.body)('startImmediately').isBoolean().withMessage('StartImmediately deve ser boolean'),
-    (0, express_validator_1.body)('scheduledFor').optional({ nullable: true, checkFalsy: true }).isISO8601().withMessage('Data de agendamento deve ser válida')
+    (0, express_validator_1.body)('scheduledFor').optional({ nullable: true, checkFalsy: true }).isISO8601().withMessage('Data de agendamento deve ser válida'),
+    (0, express_validator_1.body)('useTimeWindow').optional().isBoolean(),
+    (0, express_validator_1.body)('startTime').optional({ nullable: true }).matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Hora de início inválida'),
+    (0, express_validator_1.body)('endTime').optional({ nullable: true }).matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Hora de fim inválida')
 ];
 // List all campaigns
 const listCampaigns = async (req, res) => {
@@ -134,7 +137,7 @@ const createCampaign = async (req, res) => {
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
         }
-        const { nome, targetTags, sessionNames, messageType, messageContent, randomDelay, startImmediately, scheduledFor } = req.body;
+        const { nome, targetTags, sessionNames, messageType, messageContent, randomDelay, startImmediately, scheduledFor, startTime, endTime, useTimeWindow } = req.body;
         // Log detalhado da criação de campanha
         console.log(`🔍 === CRIANDO CAMPANHA ===`);
         console.log(`📝 Nome: ${nome}`);
@@ -150,23 +153,37 @@ const createCampaign = async (req, res) => {
         console.log(`🔍 =========================`);
         // Verificar se todas as sessões existem e estão ativas (com tenant isolation)
         const sessionWhere = {
-            name: { in: sessionNames },
-            status: 'WORKING'
+            name: { in: sessionNames }
         };
         if (req.user?.role !== 'SUPERADMIN') {
             sessionWhere.tenantId = req.tenantId;
         }
+        console.log(`🔍 Query Session Where:`, JSON.stringify(sessionWhere, null, 2));
         const sessions = await prisma.whatsAppSession.findMany({
             where: sessionWhere
         });
+        console.log(`📊 Sessões encontradas no banco (${sessions.length}):`, sessions.map(s => `${s.name} (${s.status})`));
+        // DEBUG: Listar TODAS as sessões do tenant para ver o que existe
         if (sessions.length === 0) {
-            return res.status(400).json({ error: 'Nenhuma sessão WhatsApp ativa encontrada nas selecionadas' });
+            const allTenantSessions = await prisma.whatsAppSession.findMany({
+                where: { tenantId: req.tenantId }
+            });
+            console.log(`🐛 DEBUG: Todas as sessões deste tenant no banco:`, allTenantSessions.map(s => `${s.name} (Status: ${s.status})`));
         }
-        if (sessions.length < sessionNames.length) {
-            const activeSessions = sessions.map(s => s.name);
-            const inactiveSessions = sessionNames.filter((name) => !activeSessions.includes(name));
+        const invalidSessions = [];
+        // Verificar cada sessão solicitada
+        for (const name of sessionNames) {
+            const session = sessions.find(s => s.name === name);
+            if (!session) {
+                invalidSessions.push(`Sessão '${name}' não encontrada (ou não pertence à sua organização)`);
+            }
+            else if (session.status !== 'WORKING') {
+                invalidSessions.push(`Sessão '${name}' não está ativa (Status atual: ${session.status})`);
+            }
+        }
+        if (invalidSessions.length > 0) {
             return res.status(400).json({
-                error: `As seguintes sessões não estão ativas: ${inactiveSessions.join(', ')}`
+                error: `Erro na validação das sessões:\n${invalidSessions.join('\n')}`
             });
         }
         // Buscar contatos usando ContactService com tenant isolation
@@ -202,6 +219,9 @@ const createCampaign = async (req, res) => {
                 randomDelay,
                 startImmediately,
                 scheduledFor: scheduledFor ? new Date(scheduledFor) : null,
+                startTime,
+                endTime,
+                useTimeWindow: useTimeWindow || false,
                 totalContacts: filteredContacts.length,
                 status: startImmediately ? 'RUNNING' : 'PENDING',
                 startedAt: startImmediately ? new Date() : null,

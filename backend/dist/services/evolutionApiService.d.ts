@@ -32,6 +32,11 @@ export declare class EvolutionApiService {
     restartInstance(instanceName: string): Promise<void>;
     getInstanceStatus(instanceName: string): Promise<string>;
     listInstances(): Promise<EvolutionInstanceInfo[]>;
+    createGroup(instanceName: string, groupName: string, participants: string[]): Promise<any>;
+    getGroupInviteCode(instanceName: string, groupJid: string): Promise<string | null>;
+    getGroupInfo(instanceName: string, groupJid: string): Promise<any>;
+    fetchAllGroups(instanceName: string): Promise<any[]>;
+    sendGroupMessage(instanceName: string, groupJid: string, message: any): Promise<any>;
 }
 export declare const evolutionApiService: EvolutionApiService;
 export {};

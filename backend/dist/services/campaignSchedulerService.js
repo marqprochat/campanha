@@ -68,6 +68,12 @@ class CampaignSchedulerService {
                 }
             });
             for (const campaign of runningCampaigns) {
+                // Verificar janela de horário se habilitada
+                if (!this.isWithinTimeWindow(campaign)) {
+                    // Opcional: Logar apenas em debug para não poluir
+                    // console.log(`Campaign ${campaign.id} paused due to time window`);
+                    continue;
+                }
                 if (campaign.messages.length > 0) {
                     await this.processNextMessage(campaign, campaign.messages[0]);
                 }
@@ -241,8 +247,8 @@ class CampaignSchedulerService {
                 return; // Pular este envio
             }
             // Buscar dados do contato para variáveis dinâmicas usando ContactService
-            const contactsResponse = await contactService_1.ContactService.getContacts();
-            const contact = contactsResponse.contacts.find((c) => c.id === message.contactId);
+            // Passar tenantId e page size adequado para encontrar o contato
+            const contact = await contactService_1.ContactService.getContactById(message.contactId, campaign.tenantId);
             console.log(`🔍 CONTACT FOUND:`, contact);
             // Depois aplicar variáveis dinâmicas se houver contato
             const processedContent = contact ? this.processVariables(contentWithSelectedVariation, contact) : contentWithSelectedVariation;
@@ -843,6 +849,26 @@ class CampaignSchedulerService {
         }
         catch (error) {
             console.error(`Error completing campaign ${campaignId}:`, error);
+        }
+    }
+    isWithinTimeWindow(campaign) {
+        if (!campaign.useTimeWindow || !campaign.startTime || !campaign.endTime) {
+            return true;
+        }
+        const now = new Date();
+        const currentHours = now.getHours();
+        const currentMinutes = now.getMinutes();
+        const currentTimeVal = currentHours * 60 + currentMinutes;
+        const [startH, startM] = campaign.startTime.split(':').map(Number);
+        const startTimeVal = startH * 60 + startM;
+        const [endH, endM] = campaign.endTime.split(':').map(Number);
+        const endTimeVal = endH * 60 + endM;
+        if (startTimeVal <= endTimeVal) {
+            return currentTimeVal >= startTimeVal && currentTimeVal <= endTimeVal;
+        }
+        else {
+            // Crosses midnight (e.g. 22:00 to 06:00)
+            return currentTimeVal >= startTimeVal || currentTimeVal <= endTimeVal;
         }
     }
 }

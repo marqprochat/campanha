@@ -76,7 +76,8 @@ class SettingsService {
                         companyName: data.companyName !== undefined ? data.companyName : settings.companyName,
                         faviconUrl: data.faviconUrl !== undefined ? data.faviconUrl : settings.faviconUrl,
                         pageTitle: data.pageTitle !== undefined ? data.pageTitle : settings.pageTitle,
-                        iconUrl: data.iconUrl !== undefined ? data.iconUrl : settings.iconUrl
+                        iconUrl: data.iconUrl !== undefined ? data.iconUrl : settings.iconUrl,
+                        primaryColor: data.primaryColor !== undefined ? data.primaryColor : settings.primaryColor
                     }
                 });
             }
@@ -96,7 +97,8 @@ class SettingsService {
                         companyName: data.companyName || 'Astra Campaign',
                         faviconUrl: data.faviconUrl || '/api/uploads/default_favicon.png',
                         pageTitle: data.pageTitle || 'Sistema de Gestão de Contatos',
-                        iconUrl: data.iconUrl || '/api/uploads/default_icon.png'
+                        iconUrl: data.iconUrl || '/api/uploads/default_icon.png',
+                        primaryColor: data.primaryColor || '#21975f'
                     }
                 });
             }

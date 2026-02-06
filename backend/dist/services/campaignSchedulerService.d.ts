@@ -14,6 +14,7 @@ declare class CampaignSchedulerService {
     private sendMessageViaQuepasa;
     private sendMessageViaWaha;
     private completeCampaign;
+    private isWithinTimeWindow;
 }
 declare const campaignScheduler: CampaignSchedulerService;
 export default campaignScheduler;

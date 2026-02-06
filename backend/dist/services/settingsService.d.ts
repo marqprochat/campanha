@@ -47,6 +47,7 @@ export declare class SettingsService {
         faviconUrl?: string | null;
         pageTitle?: string;
         iconUrl?: string | null;
+        primaryColor?: string | null;
     }): Promise<{
         id: string;
         createdAt: Date;

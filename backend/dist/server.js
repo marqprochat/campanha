@@ -40,8 +40,8 @@ require("dotenv/config");
 const express_1 = __importDefault(require("express"));
 const http_1 = require("http");
 const cors_1 = __importDefault(require("cors"));
-// import rateLimit from 'express-rate-limit'; // Temporariamente desabilitado
 const fs = __importStar(require("fs"));
+// Routes
 const contactRoutes_1 = require("./routes/contactRoutes");
 const categoryRoutes_1 = require("./routes/categoryRoutes");
 const mockRoutes_1 = require("./routes/mockRoutes");
@@ -63,134 +63,101 @@ const messageTemplates_1 = __importDefault(require("./routes/messageTemplates"))
 const reports_1 = __importDefault(require("./routes/reports"));
 const automation_1 = __importDefault(require("./routes/automation"));
 const chatwootRoutes_1 = __importDefault(require("./routes/chatwootRoutes"));
-// import integrationsRoutes from './routes/integrations';
-// import cacheRoutes from './routes/cache';
+const leadPageRoutes_1 = __importDefault(require("./routes/leadPageRoutes"));
+const groupRoutes_1 = require("./routes/groupRoutes");
+const uploadRoutes_1 = __importDefault(require("./routes/uploadRoutes"));
+// Services
 const auth_2 = require("./middleware/auth");
-require("./services/campaignSchedulerService"); // Inicializar scheduler
-const alertsMonitoringService_1 = require("./services/alertsMonitoringService"); // Inicializar monitoramento de alertas
-const backupService_1 = require("./services/backupService"); // Inicializar serviço de backup
-const websocketService_1 = require("./services/websocketService"); // Inicializar WebSocket
+require("./services/campaignSchedulerService");
+const alertsMonitoringService_1 = require("./services/alertsMonitoringService");
+const backupService_1 = require("./services/backupService");
+const websocketService_1 = require("./services/websocketService");
 const app = (0, express_1.default)();
 const server = (0, http_1.createServer)(app);
 const PORT = process.env.PORT || 3001;
-// Configurar para confiar no proxy (nginx/traefik) - apenas no primeiro proxy
+// Proxy configuration
 app.set('trust proxy', 1);
-// Criar diretório para uploads
+// Upload directory configuration
 const uploadDir = process.env.NODE_ENV === 'production'
     ? '/app/uploads'
-    : './uploads';
+    : './uploads'; // Check relative path if needed, often relative to process.cwd()
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
-    console.log(`📁 Diretório de uploads criado: ${uploadDir}`);
+    console.log(`📁 Directory created: ${uploadDir}`);
 }
-// CORS configurado de forma segura
+// CORS Config
 const corsOptions = {
     origin: function (origin, callback) {
         const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
             'http://localhost:3000',
             'http://localhost:5173',
-            'https://localhost:3000'
+            'https://localhost:3000',
+            'https://campanha.marqsolucoes.com.br'
         ];
-        // Permitir requests sem origin (mobile apps, etc.)
         if (!origin)
             return callback(null, true);
         if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         }
         else {
-            callback(new Error('Não permitido pelo CORS'), false);
+            callback(new Error('Not allowed by CORS'), false);
         }
     },
     credentials: true,
     optionsSuccessStatus: 200
 };
 app.use((0, cors_1.default)(corsOptions));
-// Rate limiting temporariamente desabilitado devido a problemas com trust proxy
-/*
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 1000, // limite de 1000 requests por IP por janela de tempo
-  message: {
-    error: 'Muitas requisições deste IP, tente novamente em 15 minutos.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 10, // limite de 10 tentativas de login por IP
-  message: {
-    error: 'Muitas tentativas de login, tente novamente em 15 minutos.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const aiLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minuto
-  max: 20, // limite de 20 requisições IA por minuto
-  message: {
-    error: 'Muitas requisições para IA, tente novamente em 1 minuto.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-*/
-// Temporariamente desabilitado devido a problemas com trust proxy
-// app.use(generalLimiter);
-// Middleware para todas as rotas exceto upload
+// Middleware
+// Exclude JSON/UrlEncoded processing for specific upload routes if needed, 
+// but usually multer handles it fine even if body-parser runs first unless specifically configured otherwise.
+// However, the previous code had an exclusion. Let's keep it safe.
 app.use((req, res, next) => {
-    if (req.path.includes('/media/upload')) {
+    if (req.path.includes('/media/upload') || req.path.includes('/upload/image')) {
         return next();
     }
     express_1.default.json({ limit: '50mb' })(req, res, next);
 });
 app.use((req, res, next) => {
-    if (req.path.includes('/media/upload')) {
+    if (req.path.includes('/media/upload') || req.path.includes('/upload/image')) {
         return next();
     }
     express_1.default.urlencoded({ limit: '50mb', extended: true })(req, res, next);
 });
-// Rotas públicas (autenticação) - rate limiting temporariamente desabilitado
+// Serve uploads
+app.use('/api/uploads', express_1.default.static(uploadDir));
+// Routes
 app.use('/api/auth', auth_1.default);
-// Rota pública para configurações (favicon e título)
 app.use('/api/settings', settingsRoutes_1.default);
-// Health check público
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
-// Servir uploads estaticamente (público)
-app.use('/api/uploads', express_1.default.static(uploadDir));
-// Rotas protegidas (requerem autenticação)
+// Protected Routes
 app.use('/api/contatos', auth_2.authMiddleware, contactRoutes_1.contactRoutes);
 app.use('/api/categorias', auth_2.authMiddleware, categoryRoutes_1.categoryRoutes);
 app.use('/api/csv', auth_2.authMiddleware, csvImportRoutes_1.csvImportRoutes);
 app.use('/api/waha', auth_2.authMiddleware, waha_1.default);
 app.use('/api/campaigns', auth_2.authMiddleware, campaigns_1.default);
 app.use('/api/users', auth_2.authMiddleware, users_1.default);
-app.use('/api/tenants', auth_2.authMiddleware, tenants_1.default); // SUPERADMIN only
+app.use('/api/tenants', auth_2.authMiddleware, tenants_1.default);
 app.use('/api/user-tenants', auth_2.authMiddleware, userTenants_1.default);
-app.use('/api/backup', auth_2.authMiddleware, backup_1.default); // Backup management
-app.use('/api/system', auth_2.authMiddleware, system_1.systemRoutes); // SUPERADMIN only - System stats and monitoring
-app.use('/api/alerts', auth_2.authMiddleware, alerts_1.default); // Alerts management
-app.use('/api/analytics', auth_2.authMiddleware, analytics_1.default); // Analytics and reporting per tenant
-app.use('/api/notifications', auth_2.authMiddleware, notifications_1.default); // User notifications
-app.use('/api/templates', auth_2.authMiddleware, messageTemplates_1.default); // Message templates system
-app.use('/api/reports', auth_2.authMiddleware, reports_1.default); // Advanced reporting system
-app.use('/api/automation', auth_2.authMiddleware, automation_1.default); // Automation and workflow system
-app.use('/api/chatwoot', auth_2.authMiddleware, chatwootRoutes_1.default); // Chatwoot integration
-// app.use('/api/integrations', integrationsRoutes); // External API integrations system
-// app.use('/api/cache', cacheRoutes); // Cache management and monitoring
-app.use('/api/media', auth_2.authMiddleware, mediaRoutes_1.default); // Upload de arquivos de mídia
+app.use('/api/backup', auth_2.authMiddleware, backup_1.default);
+app.use('/api/system', auth_2.authMiddleware, system_1.systemRoutes);
+app.use('/api/alerts', auth_2.authMiddleware, alerts_1.default);
+app.use('/api/analytics', auth_2.authMiddleware, analytics_1.default);
+app.use('/api/notifications', auth_2.authMiddleware, notifications_1.default);
+app.use('/api/templates', auth_2.authMiddleware, messageTemplates_1.default);
+app.use('/api/reports', auth_2.authMiddleware, reports_1.default);
+app.use('/api/automation', auth_2.authMiddleware, automation_1.default);
+app.use('/api/chatwoot', auth_2.authMiddleware, chatwootRoutes_1.default);
+app.use('/api/lead-pages', leadPageRoutes_1.default);
+app.use('/api/groups', groupRoutes_1.groupRoutes);
+app.use('/api/media', auth_2.authMiddleware, mediaRoutes_1.default);
+app.use('/api/upload', uploadRoutes_1.default);
 app.use('/api', auth_2.authMiddleware, mockRoutes_1.mockRoutes);
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-    // Initialize WebSocket service
     websocketService_1.websocketService.initialize(server);
-    // Initialize alerts monitoring service
     (0, alertsMonitoringService_1.initializeAlertsMonitoring)();
-    // Initialize backup service
     (0, backupService_1.initializeBackupService)();
 });
 //# sourceMappingURL=server.js.map
