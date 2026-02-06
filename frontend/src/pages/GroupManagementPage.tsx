@@ -55,12 +55,18 @@ export function GroupManagementPage() {
     };
 
     const handleCreateGroup = async () => {
-        if (!newGroupName || !instanceName) return alert('Preencha os campos obrigatórios');
+        if (!newGroupName || !instanceName) return alert('Preencha os campos obrigatórios (Nome e Instância)');
+
+        const participantsList = initialParticipants.split(',').map(p => p.trim()).filter(p => p);
+        if (participantsList.length === 0) {
+            return alert('É necessário adicionar pelo menos um participante para criar o grupo.');
+        }
+
         try {
             await groupService.createGroup({
                 name: newGroupName,
                 instanceName,
-                initialParticipants: initialParticipants.split(',').map(p => p.trim()).filter(p => p)
+                initialParticipants: participantsList
             });
             alert('Grupo criado!');
             setIsCreateModalOpen(false);
@@ -365,7 +371,7 @@ export function GroupManagementPage() {
                                 )}
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Participantes Iniciais (opcional)</label>
+                                <label className="block text-sm font-medium text-gray-700">Participantes Iniciais (obrigatório)</label>
                                 <input
                                     type="text"
                                     value={initialParticipants}
@@ -373,6 +379,7 @@ export function GroupManagementPage() {
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
                                     placeholder="5511999999999, 5511888888888"
                                 />
+                                <p className="text-xs text-gray-500 mt-1">Adicione pelo menos um número para criar o grupo (exigência do WhatsApp)</p>
                             </div>
                             <div className="flex justify-end gap-2 mt-6">
                                 <button onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>

@@ -183,7 +183,7 @@ export class EvolutionApiService {
 
   async createGroup(instanceName: string, groupName: string, participants: string[]): Promise<any> {
     const requestData = {
-      groupName,
+      subject: groupName,
       participants
     };
 
