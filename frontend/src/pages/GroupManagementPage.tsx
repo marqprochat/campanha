@@ -5,6 +5,7 @@ import { groupService, WhatsappGroup, WhatsAppInstance } from '../services/group
 export function GroupManagementPage() {
     const [activeTab, setActiveTab] = useState<'groups' | 'links' | 'broadcast'>('groups');
     const [groups, setGroups] = useState<WhatsappGroup[]>([]);
+    const [dynamicLinks, setDynamicLinks] = useState<DynamicLink[]>([]);
     const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
     const [loading, setLoading] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -21,6 +22,7 @@ export function GroupManagementPage() {
 
     useEffect(() => {
         fetchGroups();
+        fetchDynamicLinks();
         fetchInstances();
     }, []);
 
@@ -34,6 +36,16 @@ export function GroupManagementPage() {
             setGroups([]);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchDynamicLinks = async () => {
+        try {
+            const data = await groupService.listDynamicLinks();
+            setDynamicLinks(data || []);
+        } catch (error) {
+            console.error('Failed to fetch dynamic links', error);
+            setDynamicLinks([]);
         }
     };
 
@@ -99,6 +111,18 @@ export function GroupManagementPage() {
 
     const toggleGroupSelection = (id: string) => {
         setSelectedGroups(prev => prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]);
+    };
+
+    const handleDeleteDynamicLink = async (id: string) => {
+        if (!confirm('Deseja excluir este link dinâmico?')) return;
+        try {
+            await groupService.deleteDynamicLink(id);
+            fetchDynamicLinks();
+            alert('Link excluído!');
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao excluir link');
+        }
     };
 
     const connectedInstances = instances.filter(i => i.status === 'WORKING');
@@ -268,6 +292,7 @@ export function GroupManagementPage() {
                                             (document.getElementById('dl-name') as HTMLInputElement).value = '';
                                             (document.getElementById('dl-baseName') as HTMLInputElement).value = '';
                                             (document.getElementById('dl-participants') as HTMLInputElement).value = '';
+                                            fetchDynamicLinks();
                                         } catch (e) {
                                             console.error(e);
                                             alert('Erro ao criar link');
@@ -277,6 +302,68 @@ export function GroupManagementPage() {
                                 >
                                     Criar Link
                                 </button>
+                            </div>
+                        </div>
+
+                        {/* Dynamic Links List */}
+                        <div className="bg-white p-6 rounded-lg shadow mt-6">
+                            <h3 className="text-lg font-medium mb-4">Links Ativos</h3>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Link Compartilhável</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grupo Atual</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacidade</th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {dynamicLinks.map(link => (
+                                            <tr key={link.id}>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm font-medium text-gray-900">{link.name}</div>
+                                                    <div className="text-xs text-gray-500">/{link.slug}</div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm text-blue-600 truncate max-w-xs">{groupService.getInviteLinkUrl(link.slug)}</span>
+                                                        <button
+                                                            onClick={() => {
+                                                                navigator.clipboard.writeText(groupService.getInviteLinkUrl(link.slug));
+                                                                alert('Link copiado!');
+                                                            }}
+                                                            className="p-1 hover:bg-gray-100 rounded"
+                                                            title="Copiar link"
+                                                        >
+                                                            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className="text-sm text-gray-900">{link.activeGroup?.name || 'Inexistente'}</span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className="text-sm text-gray-900">{link.activeGroup?.currentParticipants || 0}/{link.groupCapacity}</span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                    <button
+                                                        onClick={() => handleDeleteDynamicLink(link.id)}
+                                                        className="text-red-600 hover:text-red-900"
+                                                    >
+                                                        Excluir
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {dynamicLinks.length === 0 && (
+                                            <tr>
+                                                <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">Nenhum link dinâmico criado ainda.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
