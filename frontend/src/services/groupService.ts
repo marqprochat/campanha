@@ -100,7 +100,7 @@ export const groupService = {
     // ============================================================================
     getInviteLinkUrl: (slug: string) => {
         // This returns the public URL that will redirect to the active group
-        const baseUrl = import.meta.env.VITE_API_URL || '';
-        return `${baseUrl}/groups/invite/${slug}`;
+        const origin = window.location.origin;
+        return `${origin}/api/groups/invite/${slug}`;
     }
 };
