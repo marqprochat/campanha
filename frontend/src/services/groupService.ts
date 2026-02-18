@@ -30,6 +30,7 @@ export interface DynamicLink {
     instanceName: string;
     adminOnly?: boolean;
     adminNumbers?: string;
+    groupDescription?: string;
     activeGroup?: WhatsappGroup;
     activeGroupId?: string;
     createdAt: string;
@@ -40,7 +41,7 @@ export const groupService = {
     // ============================================================================
     // GROUPS
     // ============================================================================
-    createGroup: async (data: { name: string; instanceName: string; capacity?: number; initialParticipants?: string[]; adminOnly?: boolean; adminNumbers?: string[] }) => {
+    createGroup: async (data: { name: string; instanceName: string; capacity?: number; initialParticipants?: string[]; adminOnly?: boolean; adminNumbers?: string[]; description?: string }) => {
         return api.post('/groups/groups', data);
     },
 
@@ -63,7 +64,7 @@ export const groupService = {
     // ============================================================================
     // DYNAMIC LINKS
     // ============================================================================
-    createDynamicLink: async (data: { slug: string; name: string; baseGroupName: string; instanceName: string; groupCapacity?: number; initialParticipants?: string[]; adminOnly?: boolean; adminNumbers?: string[] }) => {
+    createDynamicLink: async (data: { slug: string; name: string; baseGroupName: string; instanceName: string; groupCapacity?: number; initialParticipants?: string[]; adminOnly?: boolean; adminNumbers?: string[]; description?: string }) => {
         return api.post('/groups/dynamic-links', data);
     },
 

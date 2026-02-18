@@ -16,6 +16,7 @@ export function GroupManagementPage() {
     const [initialParticipants, setInitialParticipants] = useState(''); // Comma separated
     const [adminOnly, setAdminOnly] = useState(false);
     const [adminNumbers, setAdminNumbers] = useState(''); // Comma separated
+    const [groupDescription, setGroupDescription] = useState('');
 
     // Broadcast State
     const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
@@ -84,7 +85,8 @@ export function GroupManagementPage() {
                 instanceName,
                 initialParticipants: participantsList,
                 adminOnly,
-                adminNumbers: adminNumbersList.length > 0 ? adminNumbersList : undefined
+                adminNumbers: adminNumbersList.length > 0 ? adminNumbersList : undefined,
+                description: groupDescription || undefined
             });
             alert('Grupo criado!');
             setIsCreateModalOpen(false);
@@ -92,6 +94,7 @@ export function GroupManagementPage() {
             setInitialParticipants('');
             setAdminOnly(false);
             setAdminNumbers('');
+            setGroupDescription('');
             fetchGroups();
         } catch (error) {
             console.error(error);
@@ -274,6 +277,15 @@ export function GroupManagementPage() {
                                     />
                                     <p className="mt-1 text-xs text-gray-500">Estes números serão promovidos a admin em cada grupo criado pelo link.</p>
                                 </div>
+                                <div className="col-span-1 md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700">Descrição do Grupo (opcional)</label>
+                                    <textarea
+                                        id="dl-description"
+                                        rows={3}
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border"
+                                        placeholder="Descrição que será aplicada aos grupos criados por este link"
+                                    />
+                                </div>
                             </div>
                             <div className="mt-4">
                                 <label className="block text-sm font-medium text-gray-700">Instância Evolution</label>
@@ -313,12 +325,14 @@ export function GroupManagementPage() {
                                         const dlAdminOnly = (document.getElementById('dl-adminOnly') as HTMLInputElement).checked;
                                         const dlAdminNumbersStr = (document.getElementById('dl-adminNumbers') as HTMLInputElement).value;
                                         const dlAdminNumbers = dlAdminNumbersStr.split(',').map(p => p.trim()).filter(p => p);
+                                        const dlDescription = (document.getElementById('dl-description') as HTMLTextAreaElement).value;
 
                                         try {
                                             await groupService.createDynamicLink({
                                                 slug, name, baseGroupName, groupCapacity: capacity, instanceName, initialParticipants,
                                                 adminOnly: dlAdminOnly,
-                                                adminNumbers: dlAdminNumbers.length > 0 ? dlAdminNumbers : undefined
+                                                adminNumbers: dlAdminNumbers.length > 0 ? dlAdminNumbers : undefined,
+                                                description: dlDescription || undefined
                                             });
                                             alert(`Link criado: /invite/${slug}`);
                                             // Reset fields
@@ -328,6 +342,7 @@ export function GroupManagementPage() {
                                             (document.getElementById('dl-participants') as HTMLInputElement).value = '';
                                             (document.getElementById('dl-adminOnly') as HTMLInputElement).checked = false;
                                             (document.getElementById('dl-adminNumbers') as HTMLInputElement).value = '';
+                                            (document.getElementById('dl-description') as HTMLTextAreaElement).value = '';
                                             fetchDynamicLinks();
                                         } catch (e) {
                                             console.error(e);
@@ -546,6 +561,16 @@ export function GroupManagementPage() {
                                     placeholder="5511999999999, 5511888888888"
                                 />
                                 <p className="text-xs text-gray-500 mt-1">Estes números serão promovidos a admin no grupo. Devem ser participantes do grupo.</p>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Descrição do Grupo (opcional)</label>
+                                <textarea
+                                    value={groupDescription}
+                                    onChange={e => setGroupDescription(e.target.value)}
+                                    rows={3}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                    placeholder="Descrição que será exibida no grupo do WhatsApp"
+                                />
                             </div>
                             <div className="flex justify-end gap-2 mt-6">
                                 <button onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>

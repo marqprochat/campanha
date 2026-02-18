@@ -629,6 +629,7 @@ model DynamicLink {
   // Admin settings for groups
   adminOnly           Boolean  @default(false) @map("admin_only") // Only admins can send messages
   adminNumbers        String?  @map("admin_numbers") // Comma-separated admin phone numbers
+  groupDescription    String?  @map("group_description") // Default description for created groups
   
   // Current active group to redirect to
   activeGroupId       String?  @map("active_group_id")

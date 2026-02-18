@@ -11,6 +11,7 @@ interface CreateGroupParams {
     initialParticipants?: string[];
     adminOnly?: boolean;
     adminNumbers?: string[];
+    description?: string;
 }
 
 interface CreateDynamicLinkParams {
@@ -23,6 +24,7 @@ interface CreateDynamicLinkParams {
     initialParticipants?: string[];
     adminOnly?: boolean;
     adminNumbers?: string[];
+    description?: string;
 }
 
 interface BroadcastMessage {
@@ -47,12 +49,12 @@ export class GroupService {
     // ============================================================================
 
     async createGroup(params: CreateGroupParams): Promise<WhatsappGroup> {
-        const { name, instanceName, tenantId, capacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [] } = params;
+        const { name, instanceName, tenantId, capacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [], description } = params;
 
         console.log(`📱 Creating group '${name}' on instance '${instanceName}'`);
 
         // 1. Create group via Evolution API
-        const apiResult = await evolutionApiService.createGroup(instanceName, name, initialParticipants);
+        const apiResult = await evolutionApiService.createGroup(instanceName, name, initialParticipants, description);
         console.log('📱 Evolution API createGroup result:', JSON.stringify(apiResult, null, 2));
 
         // The response structure may vary, typically { groupMetadata: { id: 'xxx@g.us', ... } }
@@ -187,7 +189,7 @@ export class GroupService {
     // ============================================================================
 
     async createDynamicLink(params: CreateDynamicLinkParams): Promise<DynamicLink> {
-        const { slug, name, baseGroupName, instanceName, tenantId, groupCapacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [] } = params;
+        const { slug, name, baseGroupName, instanceName, tenantId, groupCapacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [], description } = params;
 
         console.log(`🔗 Creating dynamic link '${slug}' for groups named '${baseGroupName}'`);
 
@@ -199,7 +201,8 @@ export class GroupService {
             capacity: groupCapacity,
             initialParticipants,
             adminOnly,
-            adminNumbers
+            adminNumbers,
+            description
         });
 
         // Create the dynamic link pointing to this group
@@ -213,7 +216,8 @@ export class GroupService {
                 tenantId,
                 activeGroupId: firstGroup.id,
                 adminOnly,
-                adminNumbers: adminNumbers.length > 0 ? adminNumbers.join(',') : null
+                adminNumbers: adminNumbers.length > 0 ? adminNumbers.join(',') : null,
+                groupDescription: description || null
             }
         });
 
@@ -320,7 +324,8 @@ export class GroupService {
                 tenantId: dynamicLink.tenantId,
                 capacity: dynamicLink.groupCapacity,
                 adminOnly: dynamicLink.adminOnly,
-                adminNumbers: savedAdminNumbers
+                adminNumbers: savedAdminNumbers,
+                description: dynamicLink.groupDescription || undefined
             });
 
             // Update the dynamic link to point to the new group

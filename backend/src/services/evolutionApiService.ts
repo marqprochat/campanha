@@ -181,11 +181,15 @@ export class EvolutionApiService {
   // GROUP MANAGEMENT
   // ============================================================================
 
-  async createGroup(instanceName: string, groupName: string, participants: string[]): Promise<any> {
-    const requestData = {
+  async createGroup(instanceName: string, groupName: string, participants: string[], description?: string): Promise<any> {
+    const requestData: any = {
       subject: groupName,
       participants
     };
+
+    if (description) {
+      requestData.description = description;
+    }
 
     console.log(`Creating group '${groupName}' on instance '${instanceName}' with participants:`, participants);
 

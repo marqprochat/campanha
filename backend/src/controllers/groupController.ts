@@ -7,7 +7,7 @@ import { groupService } from '../services/groupService';
 
 export async function createGroup(req: Request, res: Response) {
     try {
-        const { name, instanceName, capacity, initialParticipants, adminOnly, adminNumbers } = req.body;
+        const { name, instanceName, capacity, initialParticipants, adminOnly, adminNumbers, description } = req.body;
         const tenantId = (req as any).tenantId;
 
         if (!name || !instanceName) {
@@ -21,7 +21,8 @@ export async function createGroup(req: Request, res: Response) {
             capacity,
             initialParticipants,
             adminOnly,
-            adminNumbers
+            adminNumbers,
+            description
         });
 
         res.status(201).json(group);
@@ -92,7 +93,7 @@ export async function syncGroups(req: Request, res: Response) {
 
 export async function createDynamicLink(req: Request, res: Response) {
     try {
-        const { slug, name, baseGroupName, instanceName, groupCapacity, initialParticipants, adminOnly, adminNumbers } = req.body;
+        const { slug, name, baseGroupName, instanceName, groupCapacity, initialParticipants, adminOnly, adminNumbers, description } = req.body;
         const tenantId = (req as any).tenantId;
 
         if (!slug || !name || !baseGroupName || !instanceName) {
@@ -110,7 +111,8 @@ export async function createDynamicLink(req: Request, res: Response) {
             groupCapacity,
             initialParticipants,
             adminOnly,
-            adminNumbers
+            adminNumbers,
+            description
         });
 
         res.status(201).json(dynamicLink);
