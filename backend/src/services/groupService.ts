@@ -9,6 +9,8 @@ interface CreateGroupParams {
     tenantId: string;
     capacity?: number;
     initialParticipants?: string[];
+    adminOnly?: boolean;
+    adminNumbers?: string[];
 }
 
 interface CreateDynamicLinkParams {
@@ -19,6 +21,8 @@ interface CreateDynamicLinkParams {
     tenantId: string;
     groupCapacity?: number;
     initialParticipants?: string[];
+    adminOnly?: boolean;
+    adminNumbers?: string[];
 }
 
 interface BroadcastMessage {
@@ -43,7 +47,7 @@ export class GroupService {
     // ============================================================================
 
     async createGroup(params: CreateGroupParams): Promise<WhatsappGroup> {
-        const { name, instanceName, tenantId, capacity = 1023, initialParticipants = [] } = params;
+        const { name, instanceName, tenantId, capacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [] } = params;
 
         console.log(`📱 Creating group '${name}' on instance '${instanceName}'`);
 
@@ -57,11 +61,37 @@ export class GroupService {
             throw new Error('Failed to create group: No JID returned from Evolution API');
         }
 
-        // 2. Get the invite code
+        // 2. Apply admin settings
+        if (adminOnly) {
+            try {
+                console.log(`🔒 Setting group ${groupJid} to admin-only (announcement mode)`);
+                await evolutionApiService.updateGroupSetting(instanceName, groupJid, 'announcement');
+                console.log(`✅ Group ${groupJid} set to admin-only`);
+            } catch (error) {
+                console.error(`⚠️ Failed to set admin-only for group ${groupJid}:`, error);
+            }
+        }
+
+        if (adminNumbers.length > 0) {
+            try {
+                // Format numbers for WhatsApp (ensure @s.whatsapp.net suffix)
+                const formattedAdmins = adminNumbers.map(num => {
+                    const clean = num.replace(/\D/g, '');
+                    return clean.includes('@') ? clean : `${clean}@s.whatsapp.net`;
+                });
+                console.log(`👑 Promoting admins in group ${groupJid}:`, formattedAdmins);
+                await evolutionApiService.updateParticipant(instanceName, groupJid, 'promote', formattedAdmins);
+                console.log(`✅ Admins promoted in group ${groupJid}`);
+            } catch (error) {
+                console.error(`⚠️ Failed to promote admins in group ${groupJid}:`, error);
+            }
+        }
+
+        // 3. Get the invite code
         const inviteCode = await evolutionApiService.getGroupInviteCode(instanceName, groupJid);
         const inviteLink = inviteCode ? `https://chat.whatsapp.com/${inviteCode}` : null;
 
-        // 3. Create database record
+        // 4. Create database record
         const group = await prisma.whatsappGroup.create({
             data: {
                 name,
@@ -157,7 +187,7 @@ export class GroupService {
     // ============================================================================
 
     async createDynamicLink(params: CreateDynamicLinkParams): Promise<DynamicLink> {
-        const { slug, name, baseGroupName, instanceName, tenantId, groupCapacity = 1023, initialParticipants = [] } = params;
+        const { slug, name, baseGroupName, instanceName, tenantId, groupCapacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [] } = params;
 
         console.log(`🔗 Creating dynamic link '${slug}' for groups named '${baseGroupName}'`);
 
@@ -167,7 +197,9 @@ export class GroupService {
             instanceName,
             tenantId,
             capacity: groupCapacity,
-            initialParticipants
+            initialParticipants,
+            adminOnly,
+            adminNumbers
         });
 
         // Create the dynamic link pointing to this group
@@ -179,7 +211,9 @@ export class GroupService {
                 groupCapacity,
                 instanceName,
                 tenantId,
-                activeGroupId: firstGroup.id
+                activeGroupId: firstGroup.id,
+                adminOnly,
+                adminNumbers: adminNumbers.length > 0 ? adminNumbers.join(',') : null
             }
         });
 
@@ -274,12 +308,19 @@ export class GroupService {
                 }
             });
 
-            // Create a new group
+            // Parse admin numbers from dynamic link
+            const savedAdminNumbers = dynamicLink.adminNumbers
+                ? dynamicLink.adminNumbers.split(',').map((n: string) => n.trim()).filter((n: string) => n)
+                : [];
+
+            // Create a new group with same admin settings
             const newGroup = await this.createGroup({
                 name: `${dynamicLink.baseGroupName} ${existingGroups + 1}`,
                 instanceName: dynamicLink.instanceName,
                 tenantId: dynamicLink.tenantId,
-                capacity: dynamicLink.groupCapacity
+                capacity: dynamicLink.groupCapacity,
+                adminOnly: dynamicLink.adminOnly,
+                adminNumbers: savedAdminNumbers
             });
 
             // Update the dynamic link to point to the new group

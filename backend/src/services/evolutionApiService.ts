@@ -235,6 +235,39 @@ export class EvolutionApiService {
       return [];
     }
   }
+  async updateGroupSetting(instanceName: string, groupJid: string, action: 'announcement' | 'not_announcement' | 'unlocked' | 'locked'): Promise<any> {
+    const requestData = {
+      groupJid,
+      action
+    };
+
+    console.log(`⚙️ Updating group setting for ${groupJid}: action=${action}`);
+
+    const response = await this.makeRequest(`/group/updateSetting/${instanceName}`, {
+      method: 'POST',
+      body: JSON.stringify(requestData)
+    });
+
+    return await response.json();
+  }
+
+  async updateParticipant(instanceName: string, groupJid: string, action: 'add' | 'remove' | 'promote' | 'demote', participants: string[]): Promise<any> {
+    const requestData = {
+      groupJid,
+      action,
+      participants
+    };
+
+    console.log(`👤 Updating participants for ${groupJid}: action=${action}, participants=${participants.join(', ')}`);
+
+    const response = await this.makeRequest(`/group/updateParticipant/${instanceName}`, {
+      method: 'POST',
+      body: JSON.stringify(requestData)
+    });
+
+    return await response.json();
+  }
+
   async sendGroupMessage(instanceName: string, groupJid: string, message: any): Promise<any> {
     let endpoint = '';
     let body: any = {

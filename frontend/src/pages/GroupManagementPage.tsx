@@ -14,6 +14,8 @@ export function GroupManagementPage() {
     const [newGroupName, setNewGroupName] = useState('');
     const [instanceName, setInstanceName] = useState(''); // Should select from available instances
     const [initialParticipants, setInitialParticipants] = useState(''); // Comma separated
+    const [adminOnly, setAdminOnly] = useState(false);
+    const [adminNumbers, setAdminNumbers] = useState(''); // Comma separated
 
     // Broadcast State
     const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
@@ -74,16 +76,22 @@ export function GroupManagementPage() {
             return alert('É necessário adicionar pelo menos um participante para criar o grupo.');
         }
 
+        const adminNumbersList = adminNumbers.split(',').map(p => p.trim()).filter(p => p);
+
         try {
             await groupService.createGroup({
                 name: newGroupName,
                 instanceName,
-                initialParticipants: participantsList
+                initialParticipants: participantsList,
+                adminOnly,
+                adminNumbers: adminNumbersList.length > 0 ? adminNumbersList : undefined
             });
             alert('Grupo criado!');
             setIsCreateModalOpen(false);
             setNewGroupName('');
             setInitialParticipants('');
+            setAdminOnly(false);
+            setAdminNumbers('');
             fetchGroups();
         } catch (error) {
             console.error(error);
@@ -246,6 +254,26 @@ export function GroupManagementPage() {
                                     />
                                     <p className="mt-1 text-xs text-gray-500">Adicione pelo menos um número para criar o primeiro grupo imediatamente.</p>
                                 </div>
+                                <div className="col-span-1 md:col-span-2">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            id="dl-adminOnly"
+                                            className="rounded text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <span className="text-sm font-medium text-gray-700">Apenas administradores podem enviar mensagens</span>
+                                    </label>
+                                </div>
+                                <div className="col-span-1 md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700">Números dos Administradores (opcional)</label>
+                                    <input
+                                        type="text"
+                                        id="dl-adminNumbers"
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border"
+                                        placeholder="5511999999999, 5511888888888"
+                                    />
+                                    <p className="mt-1 text-xs text-gray-500">Estes números serão promovidos a admin em cada grupo criado pelo link.</p>
+                                </div>
                             </div>
                             <div className="mt-4">
                                 <label className="block text-sm font-medium text-gray-700">Instância Evolution</label>
@@ -282,9 +310,15 @@ export function GroupManagementPage() {
                                             return alert('É necessário adicionar pelo menos um participante inicial para criar o primeiro grupo (exigência do WhatsApp).');
                                         }
 
+                                        const dlAdminOnly = (document.getElementById('dl-adminOnly') as HTMLInputElement).checked;
+                                        const dlAdminNumbersStr = (document.getElementById('dl-adminNumbers') as HTMLInputElement).value;
+                                        const dlAdminNumbers = dlAdminNumbersStr.split(',').map(p => p.trim()).filter(p => p);
+
                                         try {
                                             await groupService.createDynamicLink({
-                                                slug, name, baseGroupName, groupCapacity: capacity, instanceName, initialParticipants
+                                                slug, name, baseGroupName, groupCapacity: capacity, instanceName, initialParticipants,
+                                                adminOnly: dlAdminOnly,
+                                                adminNumbers: dlAdminNumbers.length > 0 ? dlAdminNumbers : undefined
                                             });
                                             alert(`Link criado: /invite/${slug}`);
                                             // Reset fields
@@ -292,6 +326,8 @@ export function GroupManagementPage() {
                                             (document.getElementById('dl-name') as HTMLInputElement).value = '';
                                             (document.getElementById('dl-baseName') as HTMLInputElement).value = '';
                                             (document.getElementById('dl-participants') as HTMLInputElement).value = '';
+                                            (document.getElementById('dl-adminOnly') as HTMLInputElement).checked = false;
+                                            (document.getElementById('dl-adminNumbers') as HTMLInputElement).value = '';
                                             fetchDynamicLinks();
                                         } catch (e) {
                                             console.error(e);
@@ -488,6 +524,28 @@ export function GroupManagementPage() {
                                     placeholder="5511999999999, 5511888888888"
                                 />
                                 <p className="text-xs text-gray-500 mt-1">Adicione pelo menos um número para criar o grupo (exigência do WhatsApp)</p>
+                            </div>
+                            <div>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={adminOnly}
+                                        onChange={e => setAdminOnly(e.target.checked)}
+                                        className="rounded text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span className="text-sm font-medium text-gray-700">Apenas administradores podem enviar mensagens</span>
+                                </label>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Números dos Administradores (opcional)</label>
+                                <input
+                                    type="text"
+                                    value={adminNumbers}
+                                    onChange={e => setAdminNumbers(e.target.value)}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                    placeholder="5511999999999, 5511888888888"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">Estes números serão promovidos a admin no grupo. Devem ser participantes do grupo.</p>
                             </div>
                             <div className="flex justify-end gap-2 mt-6">
                                 <button onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
