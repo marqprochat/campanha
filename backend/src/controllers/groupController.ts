@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { groupService } from '../services/groupService';
+import { fetchLinkPreview } from '../services/linkPreviewService';
 
 // ============================================================================
 // GROUP ENDPOINTS
@@ -223,6 +224,31 @@ export async function broadcastToAll(req: Request, res: Response) {
         res.json(results);
     } catch (error: any) {
         console.error('Error broadcasting to all groups:', error);
+        res.status(500).json({ error: error.message });
+    }
+}
+
+// ============================================================================
+// LINK PREVIEW
+// ============================================================================
+
+export async function getLinkPreview(req: Request, res: Response) {
+    try {
+        const { url } = req.body;
+
+        if (!url) {
+            return res.status(400).json({ error: 'url is required' });
+        }
+
+        const preview = await fetchLinkPreview(url);
+
+        if (!preview) {
+            return res.status(404).json({ error: 'Could not fetch link preview' });
+        }
+
+        res.json(preview);
+    } catch (error: any) {
+        console.error('Error fetching link preview:', error);
         res.status(500).json({ error: error.message });
     }
 }

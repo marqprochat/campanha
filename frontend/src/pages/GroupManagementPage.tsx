@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Header } from '../components/Header';
-import { groupService, WhatsappGroup, WhatsAppInstance } from '../services/groupService';
+import { groupService, WhatsappGroup, WhatsAppInstance, DynamicLink } from '../services/groupService';
+import { EmojiPicker } from '../components/EmojiPicker';
+import { LinkPreviewCard } from '../components/LinkPreviewCard';
 
 export function GroupManagementPage() {
     const [activeTab, setActiveTab] = useState<'groups' | 'links' | 'broadcast'>('groups');
@@ -22,6 +24,17 @@ export function GroupManagementPage() {
     const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
     const [broadcastMessage, setBroadcastMessage] = useState('');
     const [broadcastStatus, setBroadcastStatus] = useState<any[]>([]);
+
+    // Link Preview State
+    const [linkPreview, setLinkPreview] = useState<{ url: string; title: string; description: string; image: string | null; siteName: string } | null>(null);
+    const [linkPreviewLoading, setLinkPreviewLoading] = useState(false);
+    const lastDetectedUrl = useRef<string>('');
+
+    // Image Upload State
+    const [uploadedImage, setUploadedImage] = useState<{ url: string; preview: string } | null>(null);
+    const [imageUploading, setImageUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
         fetchGroups();
@@ -107,12 +120,27 @@ export function GroupManagementPage() {
         if (!instanceName) return alert('Defina a instância');
 
         try {
+            // Build message payload
+            const imageUrl = uploadedImage?.url || (linkPreview?.image ?? null);
+            const messagePayload: { text?: string; image?: { url: string }; caption?: string } = {};
+
+            if (imageUrl) {
+                messagePayload.image = { url: imageUrl };
+                messagePayload.caption = broadcastMessage;
+            } else {
+                messagePayload.text = broadcastMessage;
+            }
+
             const results = await groupService.broadcast({
                 instanceName,
                 groupIds: selectedGroups,
-                message: { text: broadcastMessage }
+                message: messagePayload
             });
             setBroadcastStatus(results);
+            setBroadcastMessage('');
+            setLinkPreview(null);
+            setUploadedImage(null);
+            lastDetectedUrl.current = '';
             alert('Disparo concluído');
         } catch (error) {
             console.error(error);
@@ -122,6 +150,94 @@ export function GroupManagementPage() {
 
     const toggleGroupSelection = (id: string) => {
         setSelectedGroups(prev => prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]);
+    };
+
+    // ============================================================================
+    // LINK DETECTION
+    // ============================================================================
+    const detectAndFetchLinkPreview = useCallback(async (text: string) => {
+        const urlRegex = /(https?:\/\/[^\s]+)/gi;
+        const urls = text.match(urlRegex);
+
+        if (!urls || urls.length === 0) {
+            if (linkPreview) {
+                setLinkPreview(null);
+                lastDetectedUrl.current = '';
+            }
+            return;
+        }
+
+        const firstUrl = urls[0];
+        if (firstUrl === lastDetectedUrl.current) return; // Already fetched
+
+        lastDetectedUrl.current = firstUrl;
+        setLinkPreviewLoading(true);
+
+        try {
+            const preview = await groupService.fetchLinkPreview(firstUrl);
+            setLinkPreview(preview);
+        } catch {
+            setLinkPreview(null);
+        } finally {
+            setLinkPreviewLoading(false);
+        }
+    }, [linkPreview]);
+
+    // Debounced link detection on message change
+    useEffect(() => {
+        if (!broadcastMessage) {
+            setLinkPreview(null);
+            lastDetectedUrl.current = '';
+            return;
+        }
+        const timer = setTimeout(() => {
+            detectAndFetchLinkPreview(broadcastMessage);
+        }, 800);
+        return () => clearTimeout(timer);
+    }, [broadcastMessage]);
+
+    // ============================================================================
+    // IMAGE UPLOAD
+    // ============================================================================
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Show local preview immediately
+        const localPreview = URL.createObjectURL(file);
+        setImageUploading(true);
+
+        try {
+            const result = await groupService.uploadBroadcastImage(file);
+            setUploadedImage({ url: result.url, preview: localPreview });
+        } catch {
+            alert('Erro ao fazer upload da imagem');
+            URL.revokeObjectURL(localPreview);
+        } finally {
+            setImageUploading(false);
+            // Reset file input so same file can be selected again
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    // ============================================================================
+    // EMOJI INSERT
+    // ============================================================================
+    const handleEmojiSelect = (emoji: string) => {
+        const textarea = textareaRef.current;
+        if (textarea) {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const newText = broadcastMessage.substring(0, start) + emoji + broadcastMessage.substring(end);
+            setBroadcastMessage(newText);
+            // Set cursor position after emoji
+            setTimeout(() => {
+                textarea.focus();
+                textarea.selectionStart = textarea.selectionEnd = start + emoji.length;
+            }, 0);
+        } else {
+            setBroadcastMessage(prev => prev + emoji);
+        }
     };
 
     const handleDeleteDynamicLink = async (id: string) => {
@@ -462,17 +578,103 @@ export function GroupManagementPage() {
 
                             <div className="bg-white p-4 rounded shadow space-y-4">
                                 <h3 className="font-medium">Mensagem</h3>
-                                <textarea
-                                    value={broadcastMessage}
-                                    onChange={e => setBroadcastMessage(e.target.value)}
-                                    rows={5}
-                                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
-                                    placeholder="Digite sua mensagem de broadcast aqui..."
-                                />
+                                <div className="relative">
+                                    <textarea
+                                        ref={textareaRef}
+                                        value={broadcastMessage}
+                                        onChange={e => setBroadcastMessage(e.target.value)}
+                                        rows={5}
+                                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 pb-10 border"
+                                        placeholder="Digite sua mensagem de broadcast aqui..."
+                                    />
+
+                                    {/* Toolbar */}
+                                    <div className="absolute bottom-2 left-2 flex items-center gap-1">
+                                        {/* Emoji Button */}
+                                        <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+
+                                        {/* Image Upload Button */}
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                                            title="Anexar imagem"
+                                            disabled={imageUploading}
+                                        >
+                                            {imageUploading ? (
+                                                <svg className="w-5 h-5 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                            ) : (
+                                                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp,image/gif"
+                                            className="hidden"
+                                            onChange={handleImageUpload}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Link Preview Loading */}
+                                {linkPreviewLoading && (
+                                    <div className="flex items-center gap-2 text-sm text-gray-400 py-2">
+                                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Carregando preview do link...
+                                    </div>
+                                )}
+
+                                {/* Link Preview Card */}
+                                {linkPreview && !linkPreviewLoading && (
+                                    <LinkPreviewCard
+                                        title={linkPreview.title}
+                                        description={linkPreview.description}
+                                        image={linkPreview.image}
+                                        url={linkPreview.url}
+                                        siteName={linkPreview.siteName}
+                                        onRemove={() => {
+                                            setLinkPreview(null);
+                                            lastDetectedUrl.current = '';
+                                        }}
+                                    />
+                                )}
+
+                                {/* Uploaded Image Preview */}
+                                {uploadedImage && (
+                                    <div className="relative inline-block">
+                                        <img
+                                            src={uploadedImage.preview}
+                                            alt="Preview"
+                                            className="max-h-40 rounded-lg border border-gray-200 shadow-sm"
+                                        />
+                                        <button
+                                            onClick={() => {
+                                                URL.revokeObjectURL(uploadedImage.preview);
+                                                setUploadedImage(null);
+                                            }}
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600 transition-colors"
+                                            title="Remover imagem"
+                                        >
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                )}
+
                                 <button
                                     onClick={handleBroadcast}
                                     disabled={!instanceName || selectedGroups.length === 0 || !broadcastMessage}
-                                    className="w-full btn-primary bg-green-600 text-white py-2 rounded disabled:opacity-50"
+                                    className="w-full btn-primary bg-green-600 text-white py-2 rounded disabled:opacity-50 hover:bg-green-700 transition-colors"
                                 >
                                     <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                                     Enviar para {selectedGroups.length} grupos

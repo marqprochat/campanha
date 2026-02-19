@@ -105,5 +105,30 @@ export const groupService = {
         // This returns the public URL that will redirect to the active group
         const origin = window.location.origin;
         return `${origin}/api/groups/invite/${slug}`;
+    },
+
+    // ============================================================================
+    // LINK PREVIEW
+    // ============================================================================
+    fetchLinkPreview: async (url: string) => {
+        return api.post<{ url: string; title: string; description: string; image: string | null; siteName: string; type: string }>('/groups/link-preview', { url });
+    },
+
+    // ============================================================================
+    // IMAGE UPLOAD (for broadcast)
+    // ============================================================================
+    uploadBroadcastImage: async (file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/uploads/image', {
+            method: 'POST',
+            headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            },
+            body: formData,
+        });
+        if (!response.ok) throw new Error('Failed to upload image');
+        return response.json() as Promise<{ url: string }>;
     }
 };

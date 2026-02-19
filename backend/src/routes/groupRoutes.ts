@@ -25,6 +25,9 @@ router.delete('/dynamic-links/:id', authMiddleware, groupController.deleteDynami
 router.post('/broadcast', authMiddleware, groupController.broadcastMessage);
 router.post('/broadcast/all', authMiddleware, groupController.broadcastToAll);
 
+// Link Preview
+router.post('/link-preview', authMiddleware, groupController.getLinkPreview);
+
 // ============================================================================
 // PUBLIC ROUTES (no authentication required)
 // ============================================================================
