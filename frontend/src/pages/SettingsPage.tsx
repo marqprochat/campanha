@@ -13,6 +13,7 @@ interface Settings {
   chatwootUrl?: string;
   chatwootAccountId?: string;
   chatwootApiToken?: string;
+  microlinkApiKey?: string;
 }
 
 const settingsSchema = z.object({
@@ -21,6 +22,7 @@ const settingsSchema = z.object({
   chatwootUrl: z.string().optional(),
   chatwootAccountId: z.string().optional(),
   chatwootApiToken: z.string().optional(),
+  microlinkApiKey: z.string().optional(),
 });
 
 type SettingsFormData = z.infer<typeof settingsSchema>;
@@ -28,7 +30,7 @@ type SettingsFormData = z.infer<typeof settingsSchema>;
 export function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeModal, setActiveModal] = useState<'openai' | 'groq' | 'chatwoot' | null>(null);
+  const [activeModal, setActiveModal] = useState<'openai' | 'groq' | 'chatwoot' | 'microlink' | null>(null);
   const { user } = useAuth();
 
   // Helper para fazer requisições autenticadas
@@ -96,6 +98,7 @@ export function SettingsPage() {
         setValue('chatwootUrl', data.chatwootUrl || '');
         setValue('chatwootAccountId', data.chatwootAccountId || '');
         setValue('chatwootApiToken', data.chatwootApiToken || '');
+        setValue('microlinkApiKey', data.microlinkApiKey || '');
       }
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
@@ -140,7 +143,8 @@ export function SettingsPage() {
     const integrationNames = {
       openai: 'OpenAI',
       groq: 'Groq',
-      chatwoot: 'Chatwoot'
+      chatwoot: 'Chatwoot',
+      microlink: 'Microlink'
     };
 
     if (!confirm(`Tem certeza que deseja remover a integração com ${integrationNames[type]}?`)) {
@@ -158,6 +162,8 @@ export function SettingsPage() {
         requestData.chatwootUrl = '';
         requestData.chatwootAccountId = '';
         requestData.chatwootApiToken = '';
+      } else if (type === 'microlink') {
+        requestData.microlinkApiKey = '';
       }
 
       if (user?.role === 'SUPERADMIN') {
@@ -229,11 +235,10 @@ export function SettingsPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      settings?.openaiApiKey
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${settings?.openaiApiKey
                         ? 'bg-green-100 text-green-800'
                         : 'bg-gray-100 text-gray-800'
-                    }`}>
+                      }`}>
                       {settings?.openaiApiKey ? 'Configurado' : 'Não configurado'}
                     </span>
                     <button
@@ -259,11 +264,10 @@ export function SettingsPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      settings?.groqApiKey
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${settings?.groqApiKey
                         ? 'bg-green-100 text-green-800'
                         : 'bg-gray-100 text-gray-800'
-                    }`}>
+                      }`}>
                       {settings?.groqApiKey ? 'Configurado' : 'Não configurado'}
                     </span>
                     <button
@@ -299,16 +303,53 @@ export function SettingsPage() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    settings?.chatwootUrl && settings?.chatwootAccountId && settings?.chatwootApiToken
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${settings?.chatwootUrl && settings?.chatwootAccountId && settings?.chatwootApiToken
                       ? 'bg-green-100 text-green-800'
                       : 'bg-gray-100 text-gray-800'
-                  }`}>
+                    }`}>
                     {settings?.chatwootUrl && settings?.chatwootAccountId && settings?.chatwootApiToken ? 'Configurado' : 'Não configurado'}
                   </span>
                   <button
                     onClick={() => setActiveModal('chatwoot')}
                     className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                  >
+                    Configurar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Integração Microlink */}
+          <div className="bg-white rounded-lg shadow p-6 mt-6">
+            <h2 className="text-lg font-semibold mb-6 text-gray-900">
+              🔗 Link Preview (Microlink)
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Configure uma chave API do Microlink para previews de links de produtos (Mercado Livre, Amazon, etc.) com limite maior de requisições
+            </p>
+
+            <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <span className="text-purple-600 font-semibold">🔗</span>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900">Microlink</h3>
+                    <p className="text-sm text-gray-500">API para preview de links de produtos</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${settings?.microlinkApiKey
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-800'
+                    }`}>
+                    {settings?.microlinkApiKey ? 'Configurado' : 'Não configurado'}
+                  </span>
+                  <button
+                    onClick={() => setActiveModal('microlink')}
+                    className="px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
                   >
                     Configurar
                   </button>
@@ -557,6 +598,73 @@ export function SettingsPage() {
                   type="submit"
                   disabled={isSubmitting}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Microlink */}
+      {activeModal === 'microlink' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">🔗 Configurar Microlink</h3>
+              <button
+                onClick={() => setActiveModal(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div>
+                <label htmlFor="microlinkApiKey" className="block text-sm font-medium text-gray-700 mb-1">
+                  API Key Microlink
+                </label>
+                <input
+                  id="microlinkApiKey"
+                  type="password"
+                  {...register('microlinkApiKey')}
+                  placeholder="Sua chave API do Microlink"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+                {errors.microlinkApiKey && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.microlinkApiKey.message}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Chave API do <a href="https://microlink.io" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">microlink.io</a> para desbloquear mais requisições de preview. Sem chave, o limite é de 50 req/dia.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setActiveModal(null)}
+                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Cancelar
+                </button>
+                {settings?.microlinkApiKey && (
+                  <button
+                    type="button"
+                    onClick={() => removeIntegration('microlink')}
+                    disabled={isSubmitting}
+                    className="flex-1 px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
+                  >
+                    Remover
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
                 >
                   {isSubmitting ? 'Salvando...' : 'Salvar'}
                 </button>

@@ -42,6 +42,7 @@ export class TenantSettingsService {
     chatwootUrl?: string | null;
     chatwootAccountId?: string | null;
     chatwootApiToken?: string | null;
+    microlinkApiKey?: string | null;
   }) {
     try {
       const settings = await prisma.tenantSettings.upsert({
@@ -52,7 +53,8 @@ export class TenantSettingsService {
           customBranding: data.customBranding !== undefined ? data.customBranding : undefined,
           chatwootUrl: data.chatwootUrl !== undefined ? data.chatwootUrl : undefined,
           chatwootAccountId: data.chatwootAccountId !== undefined ? data.chatwootAccountId : undefined,
-          chatwootApiToken: data.chatwootApiToken !== undefined ? data.chatwootApiToken : undefined
+          chatwootApiToken: data.chatwootApiToken !== undefined ? data.chatwootApiToken : undefined,
+          microlinkApiKey: data.microlinkApiKey !== undefined ? data.microlinkApiKey : undefined
         },
         create: {
           tenantId,
@@ -61,7 +63,8 @@ export class TenantSettingsService {
           customBranding: data.customBranding || undefined,
           chatwootUrl: data.chatwootUrl || null,
           chatwootAccountId: data.chatwootAccountId || null,
-          chatwootApiToken: data.chatwootApiToken || null
+          chatwootApiToken: data.chatwootApiToken || null,
+          microlinkApiKey: data.microlinkApiKey || null
         }
       });
 

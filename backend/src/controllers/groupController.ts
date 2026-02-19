@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
 import { groupService } from '../services/groupService';
 import { fetchLinkPreview } from '../services/linkPreviewService';
+import { AuthenticatedRequest } from '../middleware/auth';
+import { TenantSettingsService } from '../services/tenantSettingsService';
+
+const tenantSettingsService = new TenantSettingsService();
 
 // ============================================================================
 // GROUP ENDPOINTS
@@ -232,7 +236,7 @@ export async function broadcastToAll(req: Request, res: Response) {
 // LINK PREVIEW
 // ============================================================================
 
-export async function getLinkPreview(req: Request, res: Response) {
+export async function getLinkPreview(req: AuthenticatedRequest, res: Response) {
     try {
         const { url } = req.body;
 
@@ -240,7 +244,18 @@ export async function getLinkPreview(req: Request, res: Response) {
             return res.status(400).json({ error: 'url is required' });
         }
 
-        const preview = await fetchLinkPreview(url);
+        // Fetch tenant's Microlink API key if available
+        let microlinkApiKey: string | null = null;
+        if (req.tenantId) {
+            try {
+                const settings = await tenantSettingsService.getTenantSettings(req.tenantId);
+                microlinkApiKey = settings?.microlinkApiKey || null;
+            } catch {
+                // Proceed without API key
+            }
+        }
+
+        const preview = await fetchLinkPreview(url, microlinkApiKey || undefined);
 
         if (!preview) {
             return res.status(404).json({ error: 'Could not fetch link preview' });

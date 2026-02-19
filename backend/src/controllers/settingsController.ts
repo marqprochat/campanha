@@ -139,7 +139,8 @@ export const getSettings = async (req: AuthenticatedRequest, res: Response) => {
       groqApiKey: tenantSettings?.groqApiKey || null,
       chatwootUrl: tenantSettings?.chatwootUrl || null,
       chatwootAccountId: tenantSettings?.chatwootAccountId || null,
-      chatwootApiToken: tenantSettings?.chatwootApiToken || null
+      chatwootApiToken: tenantSettings?.chatwootApiToken || null,
+      microlinkApiKey: tenantSettings?.microlinkApiKey || null
     };
 
     res.json(combinedSettings);
@@ -230,7 +231,7 @@ export const updateSettings = async (req: AuthenticatedRequest, res: Response) =
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { wahaHost, wahaApiKey, evolutionHost, evolutionApiKey, quepasaUrl, quepasaLogin, quepasaPassword, companyName, pageTitle, openaiApiKey, groqApiKey, chatwootUrl, chatwootAccountId, chatwootApiToken, tenantId, primaryColor } = req.body;
+    const { wahaHost, wahaApiKey, evolutionHost, evolutionApiKey, quepasaUrl, quepasaLogin, quepasaPassword, companyName, pageTitle, openaiApiKey, groqApiKey, chatwootUrl, chatwootAccountId, chatwootApiToken, microlinkApiKey, tenantId, primaryColor } = req.body;
 
     // Atualizar configurações globais (WAHA, Evolution, Quepasa são globais)
     const globalSettings = await settingsService.updateSettings({
@@ -255,13 +256,14 @@ export const updateSettings = async (req: AuthenticatedRequest, res: Response) =
 
     // Atualizar configurações do tenant (APIs de IA e Chatwoot)
     let tenantSettings = null;
-    if (effectiveTenantId && (openaiApiKey !== undefined || groqApiKey !== undefined || chatwootUrl !== undefined || chatwootAccountId !== undefined || chatwootApiToken !== undefined)) {
+    if (effectiveTenantId && (openaiApiKey !== undefined || groqApiKey !== undefined || chatwootUrl !== undefined || chatwootAccountId !== undefined || chatwootApiToken !== undefined || microlinkApiKey !== undefined)) {
       tenantSettings = await tenantSettingsService.updateTenantSettings(effectiveTenantId, {
         openaiApiKey,
         groqApiKey,
         chatwootUrl,
         chatwootAccountId,
-        chatwootApiToken
+        chatwootApiToken,
+        microlinkApiKey
       });
     }
 
@@ -272,7 +274,8 @@ export const updateSettings = async (req: AuthenticatedRequest, res: Response) =
       groqApiKey: tenantSettings?.groqApiKey || null,
       chatwootUrl: tenantSettings?.chatwootUrl || null,
       chatwootAccountId: tenantSettings?.chatwootAccountId || null,
-      chatwootApiToken: tenantSettings?.chatwootApiToken || null
+      chatwootApiToken: tenantSettings?.chatwootApiToken || null,
+      microlinkApiKey: tenantSettings?.microlinkApiKey || null
     };
 
     res.json({
