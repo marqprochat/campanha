@@ -12,6 +12,12 @@ export interface WhatsappGroup {
     instanceName: string;
     createdAt: string;
     updatedAt: string;
+    categoryId?: string | null;
+    category?: {
+        id: string;
+        name: string;
+        color: string;
+    };
 }
 
 export interface WhatsAppInstance {
@@ -41,8 +47,12 @@ export const groupService = {
     // ============================================================================
     // GROUPS
     // ============================================================================
-    createGroup: async (data: { name: string; instanceName: string; capacity?: number; initialParticipants?: string[]; adminOnly?: boolean; adminNumbers?: string[]; description?: string }) => {
+    createGroup: async (data: { name: string; instanceName: string; capacity?: number; initialParticipants?: string[]; adminOnly?: boolean; adminNumbers?: string[]; description?: string; categoryId?: string }) => {
         return api.post('/groups/groups', data);
+    },
+
+    updateGroup: async (id: string, data: { name?: string; categoryId?: string }) => {
+        return api.put(`/groups/groups/${id}`, data);
     },
 
     listGroups: async () => {
@@ -89,6 +99,10 @@ export const groupService = {
 
     broadcastToAll: async (data: { instanceName: string; message: { text?: string; image?: { url: string }; caption?: string } }) => {
         return api.post('/groups/broadcast/all', data);
+    },
+
+    broadcastToCategory: async (data: { instanceName: string; categoryId: string; message: { text?: string; image?: { url: string }; caption?: string } }) => {
+        return api.post('/groups/broadcast/category', data);
     },
 
     // ============================================================================

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import * as groupController from '../controllers/groupController';
+import * as groupCategoryController from '../controllers/groupCategoryController';
 
 const router = Router();
 
@@ -12,6 +13,7 @@ const router = Router();
 router.post('/groups', authMiddleware, groupController.createGroup);
 router.get('/groups', authMiddleware, groupController.listGroups);
 router.get('/groups/:id', authMiddleware, groupController.getGroup);
+router.put('/groups/:id', authMiddleware, groupController.updateGroup);
 router.delete('/groups/:id', authMiddleware, groupController.deleteGroup);
 router.post('/groups/sync', authMiddleware, groupController.syncGroups);
 
@@ -23,10 +25,18 @@ router.delete('/dynamic-links/:id', authMiddleware, groupController.deleteDynami
 
 // Broadcast
 router.post('/broadcast', authMiddleware, groupController.broadcastMessage);
+router.post('/broadcast/category', authMiddleware, groupController.broadcastToCategory);
 router.post('/broadcast/all', authMiddleware, groupController.broadcastToAll);
 
 // Link Preview
 router.post('/link-preview', authMiddleware, groupController.getLinkPreview);
+
+// Group Categories
+router.post('/categories', authMiddleware, groupCategoryController.createCategory);
+router.get('/categories', authMiddleware, groupCategoryController.listCategories);
+router.get('/categories/:id', authMiddleware, groupCategoryController.getCategory);
+router.put('/categories/:id', authMiddleware, groupCategoryController.updateCategory);
+router.delete('/categories/:id', authMiddleware, groupCategoryController.deleteCategory);
 
 // ============================================================================
 // PUBLIC ROUTES (no authentication required)

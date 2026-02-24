@@ -37,6 +37,7 @@ model Tenant {
   auditLogs        AuditLog[]
   leadPages        LeadPage[]
   whatsappGroups   WhatsappGroup[]
+  groupCategories  GroupCategory[]
   dynamicLinks     DynamicLink[]
 
   @@map("tenants")
@@ -603,6 +604,9 @@ model WhatsappGroup {
   status              String   @default("ACTIVE") // ACTIVE, FULL, ARCHIVED
   instanceName        String   @map("instance_name")
   
+  categoryId          String?  @map("category_id")
+  category            GroupCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
   tenantId            String   @map("tenant_id")
   tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   
@@ -615,6 +619,25 @@ model WhatsappGroup {
   @@map("whatsapp_groups")
   @@index([tenantId])
   @@index([instanceName])
+  @@index([categoryId])
+}
+
+model GroupCategory {
+  id          String   @id @default(uuid())
+  name        String
+  color       String   @default("#000000")
+  description String?
+  tenantId    String   @map("tenant_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  groups      WhatsappGroup[]
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("group_categories")
 }
 
 model DynamicLink {

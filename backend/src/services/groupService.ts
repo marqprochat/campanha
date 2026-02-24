@@ -12,7 +12,14 @@ interface CreateGroupParams {
     adminOnly?: boolean;
     adminNumbers?: string[];
     description?: string;
+    categoryId?: string;
 }
+
+interface UpdateGroupParams {
+    categoryId?: string;
+    name?: string;
+}
+
 
 interface CreateDynamicLinkParams {
     slug: string;
@@ -49,7 +56,7 @@ export class GroupService {
     // ============================================================================
 
     async createGroup(params: CreateGroupParams): Promise<WhatsappGroup> {
-        const { name, instanceName, tenantId, capacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [], description } = params;
+        const { name, instanceName, tenantId, capacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [], description, categoryId } = params;
 
         console.log(`📱 Creating group '${name}' on instance '${instanceName}'`);
 
@@ -104,7 +111,8 @@ export class GroupService {
                 currentParticipants: initialParticipants.length + 1, // +1 for the bot itself
                 instanceName,
                 tenantId,
-                status: 'ACTIVE'
+                status: 'ACTIVE',
+                categoryId
             }
         });
 
@@ -115,6 +123,14 @@ export class GroupService {
     async listGroups(tenantId: string): Promise<WhatsappGroup[]> {
         return prisma.whatsappGroup.findMany({
             where: { tenantId },
+            include: { category: true },
+            orderBy: { createdAt: 'desc' }
+        });
+    }
+
+    async listGroupsByCategory(tenantId: string, categoryId: string): Promise<WhatsappGroup[]> {
+        return prisma.whatsappGroup.findMany({
+            where: { tenantId, categoryId, status: 'ACTIVE' },
             orderBy: { createdAt: 'desc' }
         });
     }
@@ -134,6 +150,14 @@ export class GroupService {
             }
         });
         return group;
+    }
+
+    async updateGroup(id: string, params: UpdateGroupParams): Promise<WhatsappGroup> {
+        return prisma.whatsappGroup.update({
+            where: { id },
+            data: params,
+            include: { category: true }
+        });
     }
 
     async syncGroupFromApi(instanceName: string, groupJid: string, tenantId: string): Promise<WhatsappGroup | null> {
@@ -396,6 +420,24 @@ export class GroupService {
     ): Promise<{ success: string[]; failed: string[] }> {
         const groups = await prisma.whatsappGroup.findMany({
             where: { tenantId, status: 'ACTIVE' },
+            select: { id: true }
+        });
+
+        return this.broadcastMessage(
+            instanceName,
+            groups.map(g => g.id),
+            message
+        );
+    }
+
+    async broadcastToCategory(
+        tenantId: string,
+        instanceName: string,
+        categoryId: string,
+        message: BroadcastMessage
+    ): Promise<{ success: string[]; failed: string[] }> {
+        const groups = await prisma.whatsappGroup.findMany({
+            where: { tenantId, categoryId, status: 'ACTIVE' },
             select: { id: true }
         });
 

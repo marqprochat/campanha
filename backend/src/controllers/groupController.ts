@@ -12,7 +12,7 @@ const tenantSettingsService = new TenantSettingsService();
 
 export async function createGroup(req: Request, res: Response) {
     try {
-        const { name, instanceName, capacity, initialParticipants, adminOnly, adminNumbers, description } = req.body;
+        const { name, instanceName, capacity, initialParticipants, adminOnly, adminNumbers, description, categoryId } = req.body;
         const tenantId = (req as any).tenantId;
 
         if (!name || !instanceName) {
@@ -27,12 +27,26 @@ export async function createGroup(req: Request, res: Response) {
             initialParticipants,
             adminOnly,
             adminNumbers,
-            description
+            description,
+            categoryId
         });
 
         res.status(201).json(group);
     } catch (error: any) {
         console.error('Error creating group:', error);
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export async function updateGroup(req: Request, res: Response) {
+    try {
+        const { id } = req.params;
+        const { name, categoryId } = req.body;
+
+        const group = await groupService.updateGroup(id, { name, categoryId });
+        res.json(group);
+    } catch (error: any) {
+        console.error('Error updating group:', error);
         res.status(500).json({ error: error.message });
     }
 }
@@ -228,6 +242,25 @@ export async function broadcastToAll(req: Request, res: Response) {
         res.json(results);
     } catch (error: any) {
         console.error('Error broadcasting to all groups:', error);
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export async function broadcastToCategory(req: Request, res: Response) {
+    try {
+        const { instanceName, categoryId, message } = req.body;
+        const tenantId = (req as any).tenantId;
+
+        if (!instanceName || !categoryId || !message) {
+            return res.status(400).json({
+                error: 'instanceName, categoryId, and message are required'
+            });
+        }
+
+        const results = await groupService.broadcastToCategory(tenantId, instanceName, categoryId, message);
+        res.json(results);
+    } catch (error: any) {
+        console.error('Error broadcasting to category:', error);
         res.status(500).json({ error: error.message });
     }
 }
