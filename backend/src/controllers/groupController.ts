@@ -3,8 +3,51 @@ import { groupService } from '../services/groupService';
 import { fetchLinkPreview } from '../services/linkPreviewService';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { TenantSettingsService } from '../services/tenantSettingsService';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 const tenantSettingsService = new TenantSettingsService();
+
+// Multer configuration for group images
+const getUploadDir = () => {
+    return process.env.NODE_ENV === 'production' ? '/app/uploads' : './uploads';
+};
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = getUploadDir();
+        if (!fs.existsSync(uploadDir)) {
+            try {
+                fs.mkdirSync(uploadDir, { recursive: true });
+            } catch (err) {
+                console.error('Error creating upload directory:', err);
+                return cb(err as any, uploadDir);
+            }
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        const fileName = `group_${Date.now()}${ext}`;
+        cb(null, fileName);
+    }
+});
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error(`File type not allowed: ${file.mimetype}`));
+        }
+    }
+});
+
+export const groupImageUpload = upload.single('image');
 
 // ============================================================================
 // GROUP ENDPOINTS
@@ -12,7 +55,7 @@ const tenantSettingsService = new TenantSettingsService();
 
 export async function createGroup(req: Request, res: Response) {
     try {
-        const { name, instanceName, capacity, initialParticipants, adminOnly, adminNumbers, description, categoryId } = req.body;
+        const { name, instanceName, capacity, initialParticipants, adminOnly, adminNumbers, description, categoryId, imageUrl } = req.body;
         const tenantId = (req as any).tenantId;
 
         if (!name || !instanceName) {
@@ -28,7 +71,8 @@ export async function createGroup(req: Request, res: Response) {
             adminOnly,
             adminNumbers,
             description,
-            categoryId
+            categoryId,
+            imageUrl
         });
 
         res.status(201).json(group);
@@ -41,9 +85,9 @@ export async function createGroup(req: Request, res: Response) {
 export async function updateGroup(req: Request, res: Response) {
     try {
         const { id } = req.params;
-        const { name, categoryId } = req.body;
+        const { name, categoryId, imageUrl } = req.body;
 
-        const group = await groupService.updateGroup(id, { name, categoryId });
+        const group = await groupService.updateGroup(id, { name, categoryId, imageUrl });
         res.json(group);
     } catch (error: any) {
         console.error('Error updating group:', error);
@@ -112,7 +156,7 @@ export async function syncGroups(req: Request, res: Response) {
 
 export async function createDynamicLink(req: Request, res: Response) {
     try {
-        const { slug, name, baseGroupName, instanceName, groupCapacity, initialParticipants, adminOnly, adminNumbers, description } = req.body;
+        const { slug, name, baseGroupName, instanceName, groupCapacity, initialParticipants, adminOnly, adminNumbers, description, image } = req.body;
         const tenantId = (req as any).tenantId;
 
         if (!slug || !name || !baseGroupName || !instanceName) {
@@ -131,7 +175,8 @@ export async function createDynamicLink(req: Request, res: Response) {
             initialParticipants,
             adminOnly,
             adminNumbers,
-            description
+            description,
+            image
         });
 
         res.status(201).json(dynamicLink);
@@ -297,6 +342,20 @@ export async function getLinkPreview(req: AuthenticatedRequest, res: Response) {
         res.json(preview);
     } catch (error: any) {
         console.error('Error fetching link preview:', error);
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export async function uploadGroupImage(req: Request, res: Response) {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const imageUrl = `/api/uploads/${req.file.filename}`;
+        res.json({ imageUrl });
+    } catch (error: any) {
+        console.error('Error uploading group image:', error);
         res.status(500).json({ error: error.message });
     }
 }

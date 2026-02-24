@@ -272,6 +272,22 @@ export class EvolutionApiService {
     return await response.json();
   }
 
+  async updateGroupPicture(instanceName: string, groupJid: string, image: string): Promise<any> {
+    const requestData = {
+      groupJid,
+      image // Base64 or URL
+    };
+
+    console.log(`🖼️ Updating group picture for ${groupJid}`);
+
+    const response = await this.makeRequest(`/group/updateGroupPicture/${instanceName}`, {
+      method: 'POST',
+      body: JSON.stringify(requestData)
+    });
+
+    return await response.json();
+  }
+
   async sendGroupMessage(instanceName: string, groupJid: string, message: any): Promise<any> {
     let endpoint = '';
     let body: any = {

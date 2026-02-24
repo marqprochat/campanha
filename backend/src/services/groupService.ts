@@ -13,11 +13,13 @@ interface CreateGroupParams {
     adminNumbers?: string[];
     description?: string;
     categoryId?: string;
+    imageUrl?: string;
 }
 
 interface UpdateGroupParams {
     categoryId?: string;
     name?: string;
+    imageUrl?: string;
 }
 
 
@@ -32,6 +34,7 @@ interface CreateDynamicLinkParams {
     adminOnly?: boolean;
     adminNumbers?: string[];
     description?: string;
+    image?: string;
 }
 
 interface BroadcastMessage {
@@ -56,7 +59,7 @@ export class GroupService {
     // ============================================================================
 
     async createGroup(params: CreateGroupParams): Promise<WhatsappGroup> {
-        const { name, instanceName, tenantId, capacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [], description, categoryId } = params;
+        const { name, instanceName, tenantId, capacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [], description, categoryId, imageUrl } = params;
 
         console.log(`📱 Creating group '${name}' on instance '${instanceName}'`);
 
@@ -96,11 +99,21 @@ export class GroupService {
             }
         }
 
-        // 3. Get the invite code
         const inviteCode = await evolutionApiService.getGroupInviteCode(instanceName, groupJid);
         const inviteLink = inviteCode ? `https://chat.whatsapp.com/${inviteCode}` : null;
 
-        // 4. Create database record
+        // 4. Update group picture if provided
+        if (imageUrl) {
+            try {
+                // If it's a relative URL, we might need to make it absolute or pass as base64
+                // For now, assume evolutionApiService handles it or we pass what we have
+                await evolutionApiService.updateGroupPicture(instanceName, groupJid, imageUrl);
+            } catch (error) {
+                console.error(`⚠️ Failed to update group picture for ${groupJid}:`, error);
+            }
+        }
+
+        // 5. Create database record
         const group = await prisma.whatsappGroup.create({
             data: {
                 name,
@@ -112,7 +125,8 @@ export class GroupService {
                 instanceName,
                 tenantId,
                 status: 'ACTIVE',
-                categoryId
+                categoryId,
+                imageUrl
             }
         });
 
@@ -213,7 +227,7 @@ export class GroupService {
     // ============================================================================
 
     async createDynamicLink(params: CreateDynamicLinkParams): Promise<DynamicLink> {
-        const { slug, name, baseGroupName, instanceName, tenantId, groupCapacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [], description } = params;
+        const { slug, name, baseGroupName, instanceName, tenantId, groupCapacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [], description, image } = params;
 
         console.log(`🔗 Creating dynamic link '${slug}' for groups named '${baseGroupName}'`);
 
@@ -226,7 +240,8 @@ export class GroupService {
             initialParticipants,
             adminOnly,
             adminNumbers,
-            description
+            description,
+            imageUrl: image
         });
 
         // Create the dynamic link pointing to this group
@@ -241,7 +256,8 @@ export class GroupService {
                 activeGroupId: firstGroup.id,
                 adminOnly,
                 adminNumbers: adminNumbers.length > 0 ? adminNumbers.join(',') : null,
-                groupDescription: description || null
+                groupDescription: description || null,
+                image
             }
         });
 
@@ -349,7 +365,8 @@ export class GroupService {
                 capacity: dynamicLink.groupCapacity,
                 adminOnly: dynamicLink.adminOnly,
                 adminNumbers: savedAdminNumbers,
-                description: dynamicLink.groupDescription || undefined
+                description: dynamicLink.groupDescription || undefined,
+                imageUrl: dynamicLink.image || undefined
             });
 
             // Update the dynamic link to point to the new group

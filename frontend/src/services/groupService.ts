@@ -18,6 +18,7 @@ export interface WhatsappGroup {
         name: string;
         color: string;
     };
+    imageUrl?: string | null;
 }
 
 export interface WhatsAppInstance {
@@ -39,6 +40,7 @@ export interface DynamicLink {
     groupDescription?: string;
     activeGroup?: WhatsappGroup;
     activeGroupId?: string;
+    image?: string | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -47,11 +49,11 @@ export const groupService = {
     // ============================================================================
     // GROUPS
     // ============================================================================
-    createGroup: async (data: { name: string; instanceName: string; capacity?: number; initialParticipants?: string[]; adminOnly?: boolean; adminNumbers?: string[]; description?: string; categoryId?: string }) => {
+    createGroup: async (data: { name: string; instanceName: string; capacity?: number; initialParticipants?: string[]; adminOnly?: boolean; adminNumbers?: string[]; description?: string; categoryId?: string; imageUrl?: string }) => {
         return api.post('/groups/groups', data);
     },
 
-    updateGroup: async (id: string, data: { name?: string; categoryId?: string }) => {
+    updateGroup: async (id: string, data: { name?: string; categoryId?: string; imageUrl?: string }) => {
         return api.put(`/groups/groups/${id}`, data);
     },
 
@@ -74,7 +76,7 @@ export const groupService = {
     // ============================================================================
     // DYNAMIC LINKS
     // ============================================================================
-    createDynamicLink: async (data: { slug: string; name: string; baseGroupName: string; instanceName: string; groupCapacity?: number; initialParticipants?: string[]; adminOnly?: boolean; adminNumbers?: string[]; description?: string }) => {
+    createDynamicLink: async (data: { slug: string; name: string; baseGroupName: string; instanceName: string; groupCapacity?: number; initialParticipants?: string[]; adminOnly?: boolean; adminNumbers?: string[]; description?: string; image?: string }) => {
         return api.post('/groups/dynamic-links', data);
     },
 
@@ -144,5 +146,20 @@ export const groupService = {
         });
         if (!response.ok) throw new Error('Failed to upload image');
         return response.json() as Promise<{ url: string }>;
+    },
+
+    uploadGroupImage: async (file: File) => {
+        const formData = new FormData();
+        formData.append('image', file);
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/groups/groups/upload-image', {
+            method: 'POST',
+            headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            },
+            body: formData,
+        });
+        if (!response.ok) throw new Error('Failed to upload group image');
+        return response.json() as Promise<{ imageUrl: string }>;
     }
 };

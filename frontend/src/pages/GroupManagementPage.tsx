@@ -22,6 +22,14 @@ export function GroupManagementPage() {
     const [adminNumbers, setAdminNumbers] = useState(''); // Comma separated
     const [groupDescription, setGroupDescription] = useState('');
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
+    const [groupImageUrl, setGroupImageUrl] = useState('');
+    const [isUploadingGroupImage, setIsUploadingGroupImage] = useState(false);
+    const groupImageInputRef = useRef<HTMLInputElement>(null);
+
+    // Dynamic Link Image State
+    const [dynamicLinkImage, setDynamicLinkImage] = useState('');
+    const [isUploadingLinkImage, setIsUploadingLinkImage] = useState(false);
+    const linkImageInputRef = useRef<HTMLInputElement>(null);
 
     // Category Management State
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -122,7 +130,8 @@ export function GroupManagementPage() {
                 adminOnly,
                 adminNumbers: adminNumbersList.length > 0 ? adminNumbersList : undefined,
                 description: groupDescription || undefined,
-                categoryId: selectedCategoryId || undefined
+                categoryId: selectedCategoryId || undefined,
+                imageUrl: groupImageUrl || undefined
             });
             alert('Grupo criado!');
             setIsCreateModalOpen(false);
@@ -132,6 +141,7 @@ export function GroupManagementPage() {
             setAdminNumbers('');
             setGroupDescription('');
             setSelectedCategoryId('');
+            setGroupImageUrl('');
             fetchGroups();
         } catch (error) {
             console.error(error);
@@ -304,6 +314,38 @@ export function GroupManagementPage() {
         }
     };
 
+    const handleGroupImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploadingGroupImage(true);
+        try {
+            const { imageUrl } = await groupService.uploadGroupImage(file);
+            setGroupImageUrl(imageUrl);
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao fazer upload da imagem do grupo');
+        } finally {
+            setIsUploadingGroupImage(false);
+        }
+    };
+
+    const handleLinkImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploadingLinkImage(true);
+        try {
+            const { imageUrl } = await groupService.uploadGroupImage(file);
+            setDynamicLinkImage(imageUrl);
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao fazer upload da imagem do link');
+        } finally {
+            setIsUploadingLinkImage(false);
+        }
+    };
+
     const handleEmojiSelect = (emoji: string) => {
         const textarea = textareaRef.current;
         if (textarea) {
@@ -390,7 +432,7 @@ export function GroupManagementPage() {
                                 <table className="min-w-full divide-y divide-gray-200">
                                     <thead className="bg-gray-50">
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grupo</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Participantes</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Link</th>
@@ -400,7 +442,18 @@ export function GroupManagementPage() {
                                     <tbody className="bg-white divide-y divide-gray-200">
                                         {(groups || []).map(group => (
                                             <tr key={group.id}>
-                                                <td className="px-6 py-4 whitespace-nowrap font-medium">{group.name}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap font-medium">
+                                                    <div className="flex items-center gap-3">
+                                                        {group.imageUrl ? (
+                                                            <img src={group.imageUrl} alt={group.name} className="w-8 h-8 rounded-full object-cover border border-gray-200" />
+                                                        ) : (
+                                                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
+                                                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" /></svg>
+                                                            </div>
+                                                        )}
+                                                        <span>{group.name}</span>
+                                                    </div>
+                                                </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">{group.currentParticipants}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <select
@@ -524,6 +577,25 @@ export function GroupManagementPage() {
                                     <label className="block text-sm font-medium text-gray-700">Descrição</label>
                                     <textarea id="dl-description" rows={3} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2 border" />
                                 </div>
+                                <div className="col-span-1 md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700">Imagem do Grupo</label>
+                                    <div className="mt-2 flex items-center gap-4">
+                                        {dynamicLinkImage ? (
+                                            <div className="relative">
+                                                <img src={dynamicLinkImage} alt="Preview" className="w-16 h-16 rounded-full object-cover border border-gray-200" />
+                                                <button onClick={() => setDynamicLinkImage('')} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                            </div>
+                                        ) : (
+                                            <div onClick={() => linkImageInputRef.current?.click()} className="w-16 h-16 rounded-full bg-gray-50 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-100">
+                                                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                            </div>
+                                        )}
+                                        <div className="text-xs text-gray-500">
+                                            {isUploadingLinkImage ? 'Fazendo upload...' : 'Clique para enviar imagem de perfil para os grupos deste link'}
+                                        </div>
+                                    </div>
+                                    <input ref={linkImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleLinkImageUpload} />
+                                </div>
                             </div>
                             <div className="mt-4">
                                 <label className="block text-sm font-medium text-gray-700">Instância</label>
@@ -552,9 +624,11 @@ export function GroupManagementPage() {
                                             slug, name, baseGroupName, groupCapacity: capacity, instanceName, initialParticipants,
                                             adminOnly: dlAdminOnly,
                                             adminNumbers: dlAdminNumbersStr.split(',').map(p => p.trim()).filter(p => p),
-                                            description: dlDescription
+                                            description: dlDescription,
+                                            image: dynamicLinkImage || undefined
                                         });
                                         alert('Link criado!');
+                                        setDynamicLinkImage('');
                                         fetchDynamicLinks();
                                     } catch (e) {
                                         console.error(e);
@@ -732,6 +806,25 @@ export function GroupManagementPage() {
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Descrição</label>
                                 <textarea value={groupDescription} onChange={e => setGroupDescription(e.target.value)} rows={3} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Imagem de Perfil</label>
+                                <div className="mt-2 flex items-center gap-4">
+                                    {groupImageUrl ? (
+                                        <div className="relative">
+                                            <img src={groupImageUrl} alt="Preview" className="w-16 h-16 rounded-full object-cover border border-gray-200" />
+                                            <button onClick={() => setGroupImageUrl('')} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                                        </div>
+                                    ) : (
+                                        <div onClick={() => groupImageInputRef.current?.click()} className="w-16 h-16 rounded-full bg-gray-50 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-100">
+                                            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                        </div>
+                                    )}
+                                    <div className="text-xs text-gray-500">
+                                        {isUploadingGroupImage ? 'Fazendo upload...' : 'Adicione uma imagem de perfil para o grupo'}
+                                    </div>
+                                </div>
+                                <input ref={groupImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleGroupImageUpload} />
                             </div>
                             <div className="flex justify-end gap-2 mt-6">
                                 <button onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>

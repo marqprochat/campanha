@@ -11,6 +11,7 @@ const router = Router();
 
 // Groups
 router.post('/groups', authMiddleware, groupController.createGroup);
+router.post('/groups/upload-image', authMiddleware, groupController.groupImageUpload, groupController.uploadGroupImage);
 router.get('/groups', authMiddleware, groupController.listGroups);
 router.get('/groups/:id', authMiddleware, groupController.getGroup);
 router.put('/groups/:id', authMiddleware, groupController.updateGroup);
