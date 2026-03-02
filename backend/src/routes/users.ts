@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { param, query } from 'express-validator';
 import { authMiddleware } from '../middleware/auth';
+import { checkUserQuota } from '../middleware/quotaMiddleware';
 import {
   getUsers,
   getAllUsersGlobal,
@@ -59,6 +60,7 @@ router.get('/:id',
 
 // Create new user
 router.post('/',
+  checkUserQuota,
   usersValidators.create,
   createUser
 );

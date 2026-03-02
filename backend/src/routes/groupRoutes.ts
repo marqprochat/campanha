@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import * as groupController from '../controllers/groupController';
 import * as groupCategoryController from '../controllers/groupCategoryController';
+import { checkGroupQuota } from '../middleware/quotaMiddleware';
 
 const router = Router();
 
@@ -10,7 +11,7 @@ const router = Router();
 // ============================================================================
 
 // Groups
-router.post('/groups', authMiddleware, groupController.createGroup);
+router.post('/groups', authMiddleware, checkGroupQuota, groupController.createGroup);
 router.post('/groups/upload-image', authMiddleware, groupController.groupImageUpload, groupController.uploadGroupImage);
 router.get('/groups', authMiddleware, groupController.listGroups);
 router.get('/groups/:id', authMiddleware, groupController.getGroup);

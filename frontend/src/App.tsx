@@ -20,6 +20,8 @@ import { LeadPageEditor } from './pages/admin/LeadPages/LeadPageEditor';
 import { LeadCapturePage } from './pages/public/LeadCapturePage';
 import { GroupManagementPage } from './pages/GroupManagementPage';
 import { useGlobalSettings } from './hooks/useGlobalSettings';
+import { PlanManagementPage } from './pages/admin/PlanManagementPage';
+import { SubscriptionPage } from './pages/SubscriptionPage';
 import './styles/globals.css';
 
 function AppContent() {
@@ -191,6 +193,14 @@ function AppContent() {
             }
           />
           <Route
+            path="/configuracoes/assinatura"
+            element={
+              <ProtectedRoute>
+                <SubscriptionPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/super-admin"
             element={
               <ProtectedRoute superAdminOnly={true}>
@@ -203,6 +213,14 @@ function AppContent() {
             element={
               <ProtectedRoute superAdminOnly={true}>
                 <SuperAdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/superadmin/plans"
+            element={
+              <ProtectedRoute superAdminOnly={true}>
+                <PlanManagementPage />
               </ProtectedRoute>
             }
           />

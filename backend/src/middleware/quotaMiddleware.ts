@@ -5,7 +5,7 @@ import { AuthenticatedRequest } from './auth';
 const prisma = new PrismaClient();
 
 interface QuotaCheck {
-  resource: 'users' | 'contacts' | 'campaigns' | 'connections';
+  resource: 'users' | 'contacts' | 'campaigns' | 'connections' | 'groups';
   action: 'create' | 'update';
 }
 
@@ -37,7 +37,8 @@ export const quotaMiddleware = (check: QuotaCheck) => {
                   users: true,
                   contacts: true,
                   campaigns: true,
-                  whatsappSessions: true
+                  whatsappSessions: true,
+                  whatsappGroups: true
                 }
               }
             }
@@ -79,6 +80,11 @@ export const quotaMiddleware = (check: QuotaCheck) => {
           maxAllowed = tenantQuota.maxConnections;
           resourceName = 'conexões WhatsApp';
           break;
+        case 'groups':
+          currentCount = tenantQuota.tenant._count.whatsappGroups;
+          maxAllowed = tenantQuota.maxGroups;
+          resourceName = 'grupos';
+          break;
       }
 
       // Para criação, verificar se excederá o limite
@@ -115,3 +121,4 @@ export const checkUserQuota = quotaMiddleware({ resource: 'users', action: 'crea
 export const checkContactQuota = quotaMiddleware({ resource: 'contacts', action: 'create' });
 export const checkCampaignQuota = quotaMiddleware({ resource: 'campaigns', action: 'create' });
 export const checkConnectionQuota = quotaMiddleware({ resource: 'connections', action: 'create' });
+export const checkGroupQuota = quotaMiddleware({ resource: 'groups', action: 'create' });

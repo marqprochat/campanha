@@ -30,6 +30,8 @@ import chatwootRoutes from './routes/chatwootRoutes';
 import leadPageRoutes from './routes/leadPageRoutes';
 import { groupRoutes } from './routes/groupRoutes';
 import uploadRoutes from './routes/uploadRoutes';
+import stripeWebhookRoutes from './routes/stripeWebhookRoutes';
+import planRoutes from './routes/planRoutes';
 
 // Services
 import { authMiddleware } from './middleware/auth';
@@ -87,11 +89,18 @@ app.use((req, res, next) => {
   if (req.path.includes('/media/upload') || req.path.includes('/upload/image')) {
     return next();
   }
+  // Stripe webhooks need raw body
+  if (req.path.includes('/api/webhooks/stripe')) {
+    return next();
+  }
   express.json({ limit: '50mb' })(req, res, next);
 });
 
 app.use((req, res, next) => {
   if (req.path.includes('/media/upload') || req.path.includes('/upload/image')) {
+    return next();
+  }
+  if (req.path.includes('/api/webhooks/stripe')) {
     return next();
   }
   express.urlencoded({ limit: '50mb', extended: true })(req, res, next);
@@ -106,6 +115,9 @@ app.use('/api/settings', settingsRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
+
+// Stripe Webhook Endpoint (needs raw body)
+app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhookRoutes);
 
 // Protected Routes
 app.use('/api/contatos', authMiddleware, contactRoutes);
@@ -129,6 +141,7 @@ app.use('/api/lead-pages', leadPageRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/media', authMiddleware, mediaRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/plans', authMiddleware, planRoutes);
 app.use('/api', authMiddleware, mockRoutes);
 
 server.listen(PORT, () => {
