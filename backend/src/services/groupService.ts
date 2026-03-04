@@ -223,7 +223,12 @@ export class GroupService {
     }
 
     async deleteGroupsBatch(ids: string[]): Promise<number> {
-        const result = await prisma.whatsappGroup.deleteMany({ where: { id: { in: ids } } });
+        if (!ids || ids.length === 0) return 0;
+        const result = await prisma.whatsappGroup.deleteMany({
+            where: {
+                id: { in: ids }
+            }
+        });
         return result.count;
     }
 

@@ -133,7 +133,7 @@ export async function deleteGroup(req: Request, res: Response) {
     }
 }
 
-export async function deleteGroupsBatch(req: Request, res: Response) {
+export async function deleteGroupsBatch(req: Request, res: Response): Promise<Response> {
     try {
         const { ids } = req.body;
 
@@ -142,10 +142,10 @@ export async function deleteGroupsBatch(req: Request, res: Response) {
         }
 
         const count = await groupService.deleteGroupsBatch(ids);
-        res.json({ deleted: count });
+        return res.json({ deleted: count });
     } catch (error: any) {
         console.error('Error deleting groups in batch:', error);
-        res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: error.message || 'Internal server error' });
     }
 }
 
