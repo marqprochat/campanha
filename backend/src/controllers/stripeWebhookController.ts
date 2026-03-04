@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import Stripe from 'stripe';
 import { PrismaClient } from '@prisma/client';
-import { alertsMonitoringService } from '../services/alertsMonitoringService'; // Assuming we can log errors here
+// removed unused import
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_fake', {
     apiVersion: '2023-10-16' as any,
@@ -95,7 +95,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     await updateTenantQuotas(tenantId, planId);
 }
 
-async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
+async function handleInvoicePaymentSucceeded(invoice: any) {
     if (invoice.billing_reason === 'subscription_create') {
         // Handled by checkout.session.completed
         return;
@@ -109,7 +109,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     if (!sub) return;
 
     // Update the end date (Stripe's period end)
-    const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+    const stripeSub: any = await stripe.subscriptions.retrieve(stripeSubscriptionId);
 
     await prisma.subscription.update({
         where: { id: sub.id },
@@ -121,7 +121,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     });
 }
 
-async function handleSubscriptionUpdatedOrDeleted(subscription: Stripe.Subscription) {
+async function handleSubscriptionUpdatedOrDeleted(subscription: any) {
     const sub = await prisma.subscription.findUnique({ where: { stripeSubscriptionId: subscription.id } });
     if (!sub) return;
 
