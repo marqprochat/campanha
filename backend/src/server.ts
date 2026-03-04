@@ -86,7 +86,7 @@ app.use(cors(corsOptions));
 // but usually multer handles it fine even if body-parser runs first unless specifically configured otherwise.
 // However, the previous code had an exclusion. Let's keep it safe.
 app.use((req, res, next) => {
-  if (req.path.includes('/media/upload') || req.path.includes('/upload/image')) {
+  if (req.path.includes('/media/upload') || req.path.includes('/upload/image') || req.path.includes('/upload-image')) {
     return next();
   }
   // Stripe webhooks need raw body
@@ -97,7 +97,7 @@ app.use((req, res, next) => {
 });
 
 app.use((req, res, next) => {
-  if (req.path.includes('/media/upload') || req.path.includes('/upload/image')) {
+  if (req.path.includes('/media/upload') || req.path.includes('/upload/image') || req.path.includes('/upload-image')) {
     return next();
   }
   if (req.path.includes('/api/webhooks/stripe')) {

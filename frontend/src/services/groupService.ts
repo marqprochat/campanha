@@ -136,7 +136,7 @@ export const groupService = {
     uploadBroadcastImage: async (file: File) => {
         const formData = new FormData();
         formData.append('file', file);
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('auth_token');
         const response = await fetch('/api/uploads/image', {
             method: 'POST',
             headers: {
@@ -151,7 +151,7 @@ export const groupService = {
     uploadGroupImage: async (file: File) => {
         const formData = new FormData();
         formData.append('image', file);
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('auth_token');
         const response = await fetch('/api/groups/groups/upload-image', {
             method: 'POST',
             headers: {
