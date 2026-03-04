@@ -39,6 +39,14 @@ export function GroupManagementPage() {
     // Group Assignment State
     const [assigningGroup, setAssigningGroup] = useState<WhatsappGroup | null>(null);
 
+    // Delete Mode State
+    const [isDeleteMode, setIsDeleteMode] = useState(false);
+    const [deleteSelectedGroups, setDeleteSelectedGroups] = useState<string[]>([]);
+    const [isDeletingGroups, setIsDeletingGroups] = useState(false);
+
+    // Category Filter State
+    const [filterCategory, setFilterCategory] = useState('');
+
     // Broadcast State
     const [broadcastTarget, setBroadcastTarget] = useState<'groups' | 'category'>('groups');
     const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
@@ -202,6 +210,34 @@ export function GroupManagementPage() {
             alert('Erro ao atualizar categoria do grupo');
         }
     };
+
+    // Batch Delete Handlers
+    const toggleDeleteGroupSelection = (id: string) => {
+        setDeleteSelectedGroups(prev => prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]);
+    };
+
+    const handleDeleteSelectedGroups = async () => {
+        if (deleteSelectedGroups.length === 0) return;
+        if (!confirm(`Deseja excluir ${deleteSelectedGroups.length} grupo(s)? Esta ação não pode ser desfeita.`)) return;
+
+        setIsDeletingGroups(true);
+        try {
+            const result = await groupService.deleteGroupsBatch(deleteSelectedGroups);
+            alert(`${result.deleted} grupo(s) excluído(s) com sucesso!`);
+            setDeleteSelectedGroups([]);
+            setIsDeleteMode(false);
+            fetchGroups();
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao excluir grupos');
+        } finally {
+            setIsDeletingGroups(false);
+        }
+    };
+
+    const filteredGroups = filterCategory
+        ? groups.filter(g => g.categoryId === filterCategory)
+        : groups;
 
     // Broadcast Handlers
     const handleBroadcast = async () => {
@@ -421,10 +457,66 @@ export function GroupManagementPage() {
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
                             <h2 className="text-lg font-semibold">Grupos Ativos</h2>
-                            <button onClick={() => setIsCreateModalOpen(true)} className="btn-primary flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                                Novo Grupo
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {!isDeleteMode ? (
+                                    <>
+                                        <button onClick={() => { setIsDeleteMode(true); setDeleteSelectedGroups([]); }} className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700 text-sm">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            Excluir Grupos
+                                        </button>
+                                        <button onClick={() => setIsCreateModalOpen(true)} className="btn-primary flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                            Novo Grupo
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => {
+                                                const allFilteredIds = filteredGroups.map(g => g.id);
+                                                if (deleteSelectedGroups.length === allFilteredIds.length) {
+                                                    setDeleteSelectedGroups([]);
+                                                } else {
+                                                    setDeleteSelectedGroups(allFilteredIds);
+                                                }
+                                            }}
+                                            className="flex items-center gap-2 bg-gray-200 text-gray-700 px-3 py-2 rounded hover:bg-gray-300 text-sm"
+                                        >
+                                            {deleteSelectedGroups.length === filteredGroups.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                                        </button>
+                                        <span className="text-sm text-gray-600">{deleteSelectedGroups.length} selecionado(s)</span>
+                                        <button
+                                            onClick={handleDeleteSelectedGroups}
+                                            disabled={deleteSelectedGroups.length === 0 || isDeletingGroups}
+                                            className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            {isDeletingGroups ? 'Excluindo...' : 'Excluir Selecionados'}
+                                        </button>
+                                        <button onClick={() => { setIsDeleteMode(false); setDeleteSelectedGroups([]); }} className="flex items-center gap-2 bg-gray-400 text-white px-4 py-2 rounded shadow hover:bg-gray-500 text-sm">
+                                            Cancelar
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Category Filter */}
+                        <div className="flex items-center gap-3">
+                            <label className="text-sm font-medium text-gray-600">Filtrar por Categoria:</label>
+                            <select
+                                value={filterCategory}
+                                onChange={(e) => setFilterCategory(e.target.value)}
+                                className="text-sm border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+                            >
+                                <option value="">Todas</option>
+                                {categories.map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                ))}
+                            </select>
+                            {filterCategory && (
+                                <button onClick={() => setFilterCategory('')} className="text-xs text-blue-600 hover:underline">Limpar filtro</button>
+                            )}
                         </div>
 
                         {loading ? <p>Carregando...</p> : (
@@ -432,6 +524,23 @@ export function GroupManagementPage() {
                                 <table className="min-w-full divide-y divide-gray-200">
                                     <thead className="bg-gray-50">
                                         <tr>
+                                            {isDeleteMode && (
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={filteredGroups.length > 0 && deleteSelectedGroups.length === filteredGroups.length}
+                                                        onChange={() => {
+                                                            const allFilteredIds = filteredGroups.map(g => g.id);
+                                                            if (deleteSelectedGroups.length === allFilteredIds.length) {
+                                                                setDeleteSelectedGroups([]);
+                                                            } else {
+                                                                setDeleteSelectedGroups(allFilteredIds);
+                                                            }
+                                                        }}
+                                                        className="rounded text-red-600"
+                                                    />
+                                                </th>
+                                            )}
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grupo</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Participantes</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
@@ -440,8 +549,18 @@ export function GroupManagementPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
-                                        {(groups || []).map(group => (
-                                            <tr key={group.id}>
+                                        {(filteredGroups || []).map(group => (
+                                            <tr key={group.id} className={isDeleteMode && deleteSelectedGroups.includes(group.id) ? 'bg-red-50' : ''}>
+                                                {isDeleteMode && (
+                                                    <td className="px-4 py-4 whitespace-nowrap">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={deleteSelectedGroups.includes(group.id)}
+                                                            onChange={() => toggleDeleteGroupSelection(group.id)}
+                                                            className="rounded text-red-600"
+                                                        />
+                                                    </td>
+                                                )}
                                                 <td className="px-6 py-4 whitespace-nowrap font-medium">
                                                     <div className="flex items-center gap-3">
                                                         {group.imageUrl ? (
@@ -477,6 +596,13 @@ export function GroupManagementPage() {
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{group.instanceName}</td>
                                             </tr>
                                         ))}
+                                        {filteredGroups.length === 0 && (
+                                            <tr>
+                                                <td colSpan={isDeleteMode ? 6 : 5} className="px-6 py-4 text-center text-sm text-gray-500">
+                                                    {filterCategory ? 'Nenhum grupo encontrado nesta categoria.' : 'Nenhum grupo encontrado.'}
+                                                </td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>

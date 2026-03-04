@@ -69,6 +69,10 @@ export const groupService = {
         await api.delete(`/groups/groups/${id}`);
     },
 
+    deleteGroupsBatch: async (ids: string[]) => {
+        return api.post<{ deleted: number }>('/groups/groups/batch-delete', { ids });
+    },
+
     syncGroups: async (instanceName: string) => {
         return api.post('/groups/groups/sync', { instanceName });
     },

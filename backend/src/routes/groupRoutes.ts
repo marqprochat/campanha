@@ -17,6 +17,7 @@ router.get('/groups', authMiddleware, groupController.listGroups);
 router.get('/groups/:id', authMiddleware, groupController.getGroup);
 router.put('/groups/:id', authMiddleware, groupController.updateGroup);
 router.delete('/groups/:id', authMiddleware, groupController.deleteGroup);
+router.post('/groups/batch-delete', authMiddleware, groupController.deleteGroupsBatch);
 router.post('/groups/sync', authMiddleware, groupController.syncGroups);
 
 // Dynamic Links

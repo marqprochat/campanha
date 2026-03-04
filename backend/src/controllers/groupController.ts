@@ -133,6 +133,22 @@ export async function deleteGroup(req: Request, res: Response) {
     }
 }
 
+export async function deleteGroupsBatch(req: Request, res: Response) {
+    try {
+        const { ids } = req.body;
+
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: 'ids must be a non-empty array' });
+        }
+
+        const count = await groupService.deleteGroupsBatch(ids);
+        res.json({ deleted: count });
+    } catch (error: any) {
+        console.error('Error deleting groups in batch:', error);
+        res.status(500).json({ error: error.message });
+    }
+}
+
 export async function syncGroups(req: Request, res: Response) {
     try {
         const { instanceName } = req.body;

@@ -222,6 +222,11 @@ export class GroupService {
         await prisma.whatsappGroup.delete({ where: { id } });
     }
 
+    async deleteGroupsBatch(ids: string[]): Promise<number> {
+        const result = await prisma.whatsappGroup.deleteMany({ where: { id: { in: ids } } });
+        return result.count;
+    }
+
     // ============================================================================
     // DYNAMIC LINK MANAGEMENT
     // ============================================================================
