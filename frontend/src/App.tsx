@@ -20,7 +20,6 @@ import { LeadPageEditor } from './pages/admin/LeadPages/LeadPageEditor';
 import { LeadCapturePage } from './pages/public/LeadCapturePage';
 import { GroupManagementPage } from './pages/GroupManagementPage';
 import { useGlobalSettings } from './hooks/useGlobalSettings';
-import { PlanManagementPage } from './pages/admin/PlanManagementPage';
 import { SubscriptionPage } from './pages/SubscriptionPage';
 import './styles/globals.css';
 
@@ -216,14 +215,7 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/superadmin/plans"
-            element={
-              <ProtectedRoute superAdminOnly={true}>
-                <PlanManagementPage />
-              </ProtectedRoute>
-            }
-          />
+          {/* Removed PlanManagementPage route as it's now integrated inside SuperAdminManagerPage */}
           <Route
             path="/superadmin/tenants"
             element={

@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import { SystemBackup } from '../components/SystemBackup';
 import { AnalyticsDashboard } from '../components/AnalyticsDashboard';
 import { useSettings } from '../hooks/useSettings';
+import { PlanManagementPage } from './admin/PlanManagementPage';
 
 interface Tenant {
   id: string;
@@ -177,7 +178,7 @@ type GeneralSettingsFormData = z.infer<typeof generalSettingsSchema>;
 
 
 export function SuperAdminManagerPage() {
-  const [activeTab, setActiveTab] = useState<'general' | 'appearance' | 'integrations' | 'tenants' | 'users' | 'backup'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'appearance' | 'integrations' | 'tenants' | 'users' | 'backup' | 'plans'>('general');
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<SystemStats | null>(null);
@@ -1103,6 +1104,15 @@ export function SuperAdminManagerPage() {
           >
             💾 Backup
           </button>
+          <button
+            onClick={() => setActiveTab('plans')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'plans'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+          >
+            💳 Planos
+          </button>
         </nav>
       </div>
 
@@ -1858,6 +1868,13 @@ export function SuperAdminManagerPage() {
       {/* Backup Tab */}
       {activeTab === 'backup' && (
         <SystemBackup />
+      )}
+
+      {/* Plans Tab */}
+      {activeTab === 'plans' && (
+        <div className="bg-white rounded-lg shadow">
+          <PlanManagementPage />
+        </div>
       )}
 
 
