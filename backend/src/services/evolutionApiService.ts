@@ -288,6 +288,21 @@ export class EvolutionApiService {
     return await response.json();
   }
 
+  async leaveGroup(instanceName: string, groupJid: string): Promise<any> {
+    const requestData = {
+      groupJid
+    };
+
+    console.log(`👋 Leaving group ${groupJid} on instance ${instanceName}`);
+
+    const response = await this.makeRequest(`/group/leaveGroup/${instanceName}`, {
+      method: 'POST',
+      body: JSON.stringify(requestData)
+    });
+
+    return await response.json();
+  }
+
   async sendGroupMessage(instanceName: string, groupJid: string, message: any): Promise<any> {
     let endpoint = '';
     let body: any = {

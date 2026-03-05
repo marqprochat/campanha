@@ -219,11 +219,32 @@ export class GroupService {
     }
 
     async deleteGroup(id: string): Promise<void> {
+        const group = await prisma.whatsappGroup.findUnique({ where: { id } });
+        if (group) {
+            try {
+                await evolutionApiService.leaveGroup(group.instanceName, group.jid);
+            } catch (error) {
+                console.error(`Falha ao sair do grupo ${group.jid} na Evolution API:`, error);
+            }
+        }
         await prisma.whatsappGroup.delete({ where: { id } });
     }
 
     async deleteGroupsBatch(ids: string[]): Promise<number> {
         if (!ids || ids.length === 0) return 0;
+
+        const groups = await prisma.whatsappGroup.findMany({ where: { id: { in: ids } } });
+
+        for (const group of groups) {
+            try {
+                await evolutionApiService.leaveGroup(group.instanceName, group.jid);
+                // Pequeno delay para não sobrecarregar a API
+                await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (error) {
+                console.error(`Falha ao sair do grupo ${group.jid} lutando no lote:`, error);
+            }
+        }
+
         const result = await prisma.whatsappGroup.deleteMany({
             where: {
                 id: { in: ids }
