@@ -47,12 +47,20 @@ export const listPlans = async (req: Request, res: Response) => {
 export const getCurrentSubscription = async (req: Request, res: Response) => {
     try {
         const tenantId = (req as any).tenantId;
+
+        // Se o usuário (ex: SUPERADMIN) não tiver um tenant selecionado,
+        // não é possível buscar uma assinatura
+        if (!tenantId) {
+            return res.json(null);
+        }
+
         const sub = await prisma.subscription.findUnique({
             where: { tenantId },
             include: { plan: true }
         });
         res.json(sub || null);
     } catch (error: any) {
+        console.error('getCurrentSubscription error:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -61,6 +69,10 @@ export const getCurrentSubscription = async (req: Request, res: Response) => {
 export const createCheckoutSession = async (req: Request, res: Response) => {
     try {
         const tenantId = (req as any).tenantId;
+        if (!tenantId) {
+            return res.status(400).json({ error: 'Tenant is required' });
+        }
+
         const { planId, successUrl, cancelUrl } = req.body;
         if (!planId || !successUrl || !cancelUrl) {
             return res.status(400).json({ error: 'planId, successUrl, and cancelUrl are required' });
@@ -78,6 +90,10 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
 export const createPortalSession = async (req: Request, res: Response) => {
     try {
         const tenantId = (req as any).tenantId;
+        if (!tenantId) {
+            return res.status(400).json({ error: 'Tenant is required' });
+        }
+
         const { returnUrl } = req.body;
         if (!returnUrl) {
             return res.status(400).json({ error: 'returnUrl is required' });
