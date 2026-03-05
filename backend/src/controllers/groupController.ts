@@ -62,23 +62,66 @@ export async function createGroup(req: Request, res: Response) {
             return res.status(400).json({ error: 'name and instanceName are required' });
         }
 
-        const group = await groupService.createGroup({
-            name,
-            instanceName,
-            tenantId,
-            capacity,
-            initialParticipants,
-            adminOnly,
-            adminNumbers,
-            description,
-            categoryId,
-            imageUrl
-        });
+        const isSSE = req.headers.accept === 'text/event-stream';
 
-        res.status(201).json(group);
+        if (isSSE) {
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            res.flushHeaders(); // Establish SSE connection immediately
+
+            // Send initial ping to confirm connection
+            res.write(`data: ${JSON.stringify({ type: 'progress', step: 'Iniciando requisição...' })}\n\n`);
+
+            try {
+                const group = await groupService.createGroup({
+                    name,
+                    instanceName,
+                    tenantId,
+                    capacity,
+                    initialParticipants,
+                    adminOnly,
+                    adminNumbers,
+                    description,
+                    categoryId,
+                    imageUrl,
+                    onProgress: (step) => {
+                        res.write(`data: ${JSON.stringify({ type: 'progress', step })}\n\n`);
+                    }
+                });
+
+                res.write(`data: ${JSON.stringify({ type: 'success', data: group })}\n\n`);
+                res.end();
+            } catch (error: any) {
+                console.error('Error creating group (SSE):', error);
+                res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+                res.end();
+            }
+        } else {
+            // Standard JSON response fallback
+            const group = await groupService.createGroup({
+                name,
+                instanceName,
+                tenantId,
+                capacity,
+                initialParticipants,
+                adminOnly,
+                adminNumbers,
+                description,
+                categoryId,
+                imageUrl
+            });
+
+            res.status(201).json(group);
+        }
     } catch (error: any) {
         console.error('Error creating group:', error);
-        res.status(500).json({ error: error.message });
+        if (!res.headersSent) {
+            res.status(500).json({ error: error.message });
+        } else {
+            res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+            res.end();
+        }
     }
 }
 
@@ -181,24 +224,66 @@ export async function createDynamicLink(req: Request, res: Response) {
             });
         }
 
-        const dynamicLink = await groupService.createDynamicLink({
-            slug,
-            name,
-            baseGroupName,
-            instanceName,
-            tenantId,
-            groupCapacity,
-            initialParticipants,
-            adminOnly,
-            adminNumbers,
-            description,
-            image
-        });
+        const isSSE = req.headers.accept === 'text/event-stream';
 
-        res.status(201).json(dynamicLink);
+        if (isSSE) {
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            res.flushHeaders();
+
+            res.write(`data: ${JSON.stringify({ type: 'progress', step: 'Iniciando requisição...' })}\n\n`);
+
+            try {
+                const dynamicLink = await groupService.createDynamicLink({
+                    slug,
+                    name,
+                    baseGroupName,
+                    instanceName,
+                    tenantId,
+                    groupCapacity,
+                    initialParticipants,
+                    adminOnly,
+                    adminNumbers,
+                    description,
+                    image,
+                    onProgress: (step) => {
+                        res.write(`data: ${JSON.stringify({ type: 'progress', step })}\n\n`);
+                    }
+                });
+
+                res.write(`data: ${JSON.stringify({ type: 'success', data: dynamicLink })}\n\n`);
+                res.end();
+            } catch (error: any) {
+                console.error('Error creating dynamic link (SSE):', error);
+                res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+                res.end();
+            }
+        } else {
+            const dynamicLink = await groupService.createDynamicLink({
+                slug,
+                name,
+                baseGroupName,
+                instanceName,
+                tenantId,
+                groupCapacity,
+                initialParticipants,
+                adminOnly,
+                adminNumbers,
+                description,
+                image
+            });
+
+            res.status(201).json(dynamicLink);
+        }
     } catch (error: any) {
         console.error('Error creating dynamic link:', error);
-        res.status(500).json({ error: error.message });
+        if (!res.headersSent) {
+            res.status(500).json({ error: error.message });
+        } else {
+            res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+            res.end();
+        }
     }
 }
 

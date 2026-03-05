@@ -65,6 +65,12 @@ export function GroupManagementPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+    // Progress Modal State
+    const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
+    const [progressSteps, setProgressSteps] = useState<string[]>([]);
+    const [progressCurrentStep, setProgressCurrentStep] = useState<string>('');
+    const [progressError, setProgressError] = useState<string>('');
+
     useEffect(() => {
         fetchGroups();
         fetchDynamicLinks();
@@ -130,8 +136,15 @@ export function GroupManagementPage() {
 
         const adminNumbersList = adminNumbers.split(',').map(p => p.trim()).filter(p => p);
 
+        // Reset progress state and open modal
+        setProgressSteps([]);
+        setProgressCurrentStep('Iniciando...');
+        setProgressError('');
+        setIsProgressModalOpen(true);
+        setIsCreateModalOpen(false); // Close the form modal
+
         try {
-            await groupService.createGroup({
+            await groupService.createGroupStreaming({
                 name: newGroupName,
                 instanceName,
                 initialParticipants: participantsList,
@@ -140,20 +153,34 @@ export function GroupManagementPage() {
                 description: groupDescription || undefined,
                 categoryId: selectedCategoryId || undefined,
                 imageUrl: groupImageUrl || undefined
+            }, (message) => {
+                if (message.type === 'progress') {
+                    setProgressCurrentStep(message.step);
+                    setProgressSteps(prev => {
+                        // Keep track of previous steps
+                        if (prev.includes(message.step)) return prev;
+                        return [...prev, message.step];
+                    });
+                } else if (message.type === 'success') {
+                    setTimeout(() => {
+                        setIsProgressModalOpen(false);
+                        alert('Grupo criado!');
+                        setNewGroupName('');
+                        setInitialParticipants('');
+                        setAdminOnly(false);
+                        setAdminNumbers('');
+                        setGroupDescription('');
+                        setSelectedCategoryId('');
+                        setGroupImageUrl('');
+                        fetchGroups();
+                    }, 1500); // Give user a moment to see completion
+                } else if (message.type === 'error') {
+                    setProgressError(message.error);
+                }
             });
-            alert('Grupo criado!');
-            setIsCreateModalOpen(false);
-            setNewGroupName('');
-            setInitialParticipants('');
-            setAdminOnly(false);
-            setAdminNumbers('');
-            setGroupDescription('');
-            setSelectedCategoryId('');
-            setGroupImageUrl('');
-            fetchGroups();
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            alert('Erro ao criar grupo');
+            setProgressError(error.message || 'Erro ao criar grupo');
         }
     };
 
@@ -745,20 +772,40 @@ export function GroupManagementPage() {
                                     const initialParticipants = participantsStr.split(',').map(p => p.trim()).filter(p => p);
                                     if (initialParticipants.length === 0) return alert('Adicione participantes iniciais');
 
+                                    setProgressSteps([]);
+                                    setProgressCurrentStep('Iniciando...');
+                                    setProgressError('');
+                                    setIsProgressModalOpen(true);
+
                                     try {
-                                        await groupService.createDynamicLink({
+                                        await groupService.createDynamicLinkStreaming({
                                             slug, name, baseGroupName, groupCapacity: capacity, instanceName, initialParticipants,
                                             adminOnly: dlAdminOnly,
                                             adminNumbers: dlAdminNumbersStr.split(',').map(p => p.trim()).filter(p => p),
                                             description: dlDescription,
                                             image: dynamicLinkImage || undefined
+                                        }, (message) => {
+                                            if (message.type === 'progress') {
+                                                setProgressCurrentStep(message.step);
+                                                setProgressSteps(prev => prev.includes(message.step) ? prev : [...prev, message.step]);
+                                            } else if (message.type === 'success') {
+                                                setTimeout(() => {
+                                                    setIsProgressModalOpen(false);
+                                                    alert('Link criado!');
+                                                    setDynamicLinkImage('');
+                                                    // Clear form (simpler approach)
+                                                    (document.getElementById('dl-slug') as HTMLInputElement).value = '';
+                                                    (document.getElementById('dl-name') as HTMLInputElement).value = '';
+                                                    (document.getElementById('dl-baseName') as HTMLInputElement).value = '';
+                                                    fetchDynamicLinks();
+                                                }, 1500);
+                                            } else if (message.type === 'error') {
+                                                setProgressError(message.error);
+                                            }
                                         });
-                                        alert('Link criado!');
-                                        setDynamicLinkImage('');
-                                        fetchDynamicLinks();
-                                    } catch (e) {
+                                    } catch (e: any) {
                                         console.error(e);
-                                        alert('Erro ao criar link');
+                                        setProgressError(e.message || 'Erro ao criar link dinâmico');
                                     }
                                 }} className="btn-primary bg-blue-600 text-white px-4 py-2 rounded">Criar Link</button>
                             </div>
@@ -984,6 +1031,56 @@ export function GroupManagementPage() {
                                 <button onClick={handleSaveCategory} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Salvar</button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Progress Modal */}
+            {isProgressModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-2xl">
+                        <h3 className="text-xl font-bold mb-6 text-center text-gray-800">Criando...</h3>
+
+                        <div className="space-y-4 mb-6">
+                            {progressSteps.map((step, index) => (
+                                <div key={index} className="flex items-center gap-3 text-sm text-gray-600">
+                                    <svg className="w-5 h-5 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    <span>{step}</span>
+                                </div>
+                            ))}
+
+                            {!progressError && progressCurrentStep && !progressSteps.includes(progressCurrentStep) && (
+                                <div className="flex items-center gap-3 text-sm font-medium text-blue-600">
+                                    <svg className="animate-spin w-5 h-5 text-blue-600 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span>{progressCurrentStep}</span>
+                                </div>
+                            )}
+
+                            {progressError && (
+                                <div className="flex items-start gap-3 text-sm text-red-600 bg-red-50 p-3 rounded-md">
+                                    <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span>{progressError}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {progressError && (
+                            <div className="flex justify-center mt-6">
+                                <button
+                                    onClick={() => setIsProgressModalOpen(false)}
+                                    className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium transition-colors"
+                                >
+                                    Fechar
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

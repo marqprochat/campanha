@@ -14,6 +14,7 @@ interface CreateGroupParams {
     description?: string;
     categoryId?: string;
     imageUrl?: string;
+    onProgress?: (step: string) => void;
 }
 
 interface UpdateGroupParams {
@@ -35,6 +36,7 @@ interface CreateDynamicLinkParams {
     adminNumbers?: string[];
     description?: string;
     image?: string;
+    onProgress?: (step: string) => void;
 }
 
 interface BroadcastMessage {
@@ -59,9 +61,10 @@ export class GroupService {
     // ============================================================================
 
     async createGroup(params: CreateGroupParams): Promise<WhatsappGroup> {
-        const { name, instanceName, tenantId, capacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [], description, categoryId, imageUrl } = params;
+        const { name, instanceName, tenantId, capacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [], description, categoryId, imageUrl, onProgress } = params;
 
         console.log(`📱 Creating group '${name}' on instance '${instanceName}'`);
+        onProgress?.('Criando grupo na Evolution API...');
 
         // 1. Create group via Evolution API
         const apiResult = await evolutionApiService.createGroup(instanceName, name, initialParticipants, description);
@@ -76,6 +79,7 @@ export class GroupService {
         // 2. Apply admin settings
         if (adminOnly) {
             try {
+                onProgress?.('Configurando grupo para restrito a administradores...');
                 console.log(`🔒 Setting group ${groupJid} to admin-only (announcement mode)`);
                 await evolutionApiService.updateGroupSetting(instanceName, groupJid, 'announcement');
                 console.log(`✅ Group ${groupJid} set to admin-only`);
@@ -91,6 +95,7 @@ export class GroupService {
                     const clean = num.replace(/\D/g, '');
                     return clean.includes('@') ? clean : `${clean}@s.whatsapp.net`;
                 });
+                onProgress?.(`Promovendo ${formattedAdmins.length} administradores...`);
                 console.log(`👑 Promoting admins in group ${groupJid}:`, formattedAdmins);
                 await evolutionApiService.updateParticipant(instanceName, groupJid, 'promote', formattedAdmins);
                 console.log(`✅ Admins promoted in group ${groupJid}`);
@@ -99,40 +104,43 @@ export class GroupService {
             }
         }
 
+        onProgress?.('Gerando link de convite...');
         const inviteCode = await evolutionApiService.getGroupInviteCode(instanceName, groupJid);
         const inviteLink = inviteCode ? `https://chat.whatsapp.com/${inviteCode}` : null;
 
         // 4. Update group picture if provided
         if (imageUrl) {
             try {
+                onProgress?.('Atualizando imagem do grupo...');
                 let finalImage = imageUrl;
-                
+
                 if (imageUrl.startsWith('/api/uploads/')) {
                     const fs = require('fs');
                     const path = require('path');
                     const filename = imageUrl.replace('/api/uploads/', '');
                     const uploadDir = process.env.NODE_ENV === 'production' ? '/app/uploads' : path.join(process.cwd(), 'uploads');
                     const filePath = path.join(uploadDir, filename);
-                    
+
                     if (fs.existsSync(filePath)) {
                         const fileBuffer = fs.readFileSync(filePath);
                         const ext = path.extname(filePath).toLowerCase();
                         let mimeType = 'image/jpeg';
                         if (ext === '.png') mimeType = 'image/png';
                         else if (ext === '.webp') mimeType = 'image/webp';
-                        
+
                         // Evolution API usually accepts base64 with or without data URL prefix, 
                         // but setting the base64 encoded string directly is safer for whatsapp-baileys
                         finalImage = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
                     }
                 }
-                
+
                 await evolutionApiService.updateGroupPicture(instanceName, groupJid, finalImage);
             } catch (error) {
                 console.error(`⚠️ Failed to update group picture for ${groupJid}:`, error);
             }
         }
 
+        onProgress?.('Registrando no banco de dados...');
         // 5. Create database record
         const group = await prisma.whatsappGroup.create({
             data: {
@@ -151,6 +159,7 @@ export class GroupService {
         });
 
         console.log(`✅ Group '${name}' created with JID: ${groupJid}`);
+        onProgress?.('Concluído!');
         return group;
     }
 
@@ -278,7 +287,7 @@ export class GroupService {
     // ============================================================================
 
     async createDynamicLink(params: CreateDynamicLinkParams): Promise<DynamicLink> {
-        const { slug, name, baseGroupName, instanceName, tenantId, groupCapacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [], description, image } = params;
+        const { slug, name, baseGroupName, instanceName, tenantId, groupCapacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [], description, image, onProgress } = params;
 
         console.log(`🔗 Creating dynamic link '${slug}' for groups named '${baseGroupName}'`);
 
@@ -292,9 +301,11 @@ export class GroupService {
             adminOnly,
             adminNumbers,
             description,
-            imageUrl: image
+            imageUrl: image,
+            onProgress
         });
 
+        onProgress?.('Preparando link dinâmico...');
         // Create the dynamic link pointing to this group
         const dynamicLink = await prisma.dynamicLink.create({
             data: {
@@ -313,6 +324,7 @@ export class GroupService {
         });
 
         console.log(`✅ Dynamic link '${slug}' created, pointing to group '${firstGroup.name}'`);
+        onProgress?.('Link dinâmico criado e ativo!');
         return dynamicLink;
     }
 

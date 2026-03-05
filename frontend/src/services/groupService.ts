@@ -53,6 +53,51 @@ export const groupService = {
         return api.post('/groups/groups', data);
     },
 
+    createGroupStreaming: async (
+        data: { name: string; instanceName: string; capacity?: number; initialParticipants?: string[]; adminOnly?: boolean; adminNumbers?: string[]; description?: string; categoryId?: string; imageUrl?: string },
+        onMessage: (message: any) => void
+    ) => {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch('/api/groups/groups', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                'Accept': 'text/event-stream'
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to create group');
+        }
+
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+
+        if (!reader) throw new Error('Response stream not available');
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const parsedData = JSON.parse(line.replace('data: ', ''));
+                        onMessage(parsedData);
+                    } catch (e) {
+                        console.error('Error parsing stream data', e);
+                    }
+                }
+            }
+        }
+    },
+
     updateGroup: async (id: string, data: { name?: string; categoryId?: string; imageUrl?: string }) => {
         return api.put(`/groups/groups/${id}`, data);
     },
@@ -82,6 +127,51 @@ export const groupService = {
     // ============================================================================
     createDynamicLink: async (data: { slug: string; name: string; baseGroupName: string; instanceName: string; groupCapacity?: number; initialParticipants?: string[]; adminOnly?: boolean; adminNumbers?: string[]; description?: string; image?: string }) => {
         return api.post('/groups/dynamic-links', data);
+    },
+
+    createDynamicLinkStreaming: async (
+        data: { slug: string; name: string; baseGroupName: string; instanceName: string; groupCapacity?: number; initialParticipants?: string[]; adminOnly?: boolean; adminNumbers?: string[]; description?: string; image?: string },
+        onMessage: (message: any) => void
+    ) => {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch('/api/groups/dynamic-links', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                'Accept': 'text/event-stream'
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to create dynamic link');
+        }
+
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+
+        if (!reader) throw new Error('Response stream not available');
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const parsedData = JSON.parse(line.replace('data: ', ''));
+                        onMessage(parsedData);
+                    } catch (e) {
+                        console.error('Error parsing stream data', e);
+                    }
+                }
+            }
+        }
     },
 
     listDynamicLinks: async () => {
