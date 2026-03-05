@@ -105,9 +105,29 @@ export class GroupService {
         // 4. Update group picture if provided
         if (imageUrl) {
             try {
-                // If it's a relative URL, we might need to make it absolute or pass as base64
-                // For now, assume evolutionApiService handles it or we pass what we have
-                await evolutionApiService.updateGroupPicture(instanceName, groupJid, imageUrl);
+                let finalImage = imageUrl;
+                
+                if (imageUrl.startsWith('/api/uploads/')) {
+                    const fs = require('fs');
+                    const path = require('path');
+                    const filename = imageUrl.replace('/api/uploads/', '');
+                    const uploadDir = process.env.NODE_ENV === 'production' ? '/app/uploads' : path.join(process.cwd(), 'uploads');
+                    const filePath = path.join(uploadDir, filename);
+                    
+                    if (fs.existsSync(filePath)) {
+                        const fileBuffer = fs.readFileSync(filePath);
+                        const ext = path.extname(filePath).toLowerCase();
+                        let mimeType = 'image/jpeg';
+                        if (ext === '.png') mimeType = 'image/png';
+                        else if (ext === '.webp') mimeType = 'image/webp';
+                        
+                        // Evolution API usually accepts base64 with or without data URL prefix, 
+                        // but setting the base64 encoded string directly is safer for whatsapp-baileys
+                        finalImage = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
+                    }
+                }
+                
+                await evolutionApiService.updateGroupPicture(instanceName, groupJid, finalImage);
             } catch (error) {
                 console.error(`⚠️ Failed to update group picture for ${groupJid}:`, error);
             }
