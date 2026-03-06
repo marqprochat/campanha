@@ -231,9 +231,9 @@ export const updateSettings = async (req: AuthenticatedRequest, res: Response) =
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { wahaHost, wahaApiKey, evolutionHost, evolutionApiKey, quepasaUrl, quepasaLogin, quepasaPassword, companyName, pageTitle, openaiApiKey, groqApiKey, chatwootUrl, chatwootAccountId, chatwootApiToken, microlinkApiKey, tenantId, primaryColor } = req.body;
+    const { wahaHost, wahaApiKey, evolutionHost, evolutionApiKey, quepasaUrl, quepasaLogin, quepasaPassword, companyName, pageTitle, openaiApiKey, groqApiKey, chatwootUrl, chatwootAccountId, chatwootApiToken, microlinkApiKey, tenantId, primaryColor, asaasApiKey, asaasWebhookToken, asaasSandbox, asaasBillingType, asaasFineValue, asaasInterestValue, asaasDaysBeforeDueDate } = req.body;
 
-    // Atualizar configurações globais (WAHA, Evolution, Quepasa são globais)
+    // Atualizar configurações globais (WAHA, Evolution, Quepasa, Asaas são globais)
     const globalSettings = await settingsService.updateSettings({
       wahaHost,
       wahaApiKey,
@@ -244,7 +244,14 @@ export const updateSettings = async (req: AuthenticatedRequest, res: Response) =
       quepasaPassword,
       companyName,
       pageTitle,
-      primaryColor
+      primaryColor,
+      asaasApiKey,
+      asaasWebhookToken,
+      asaasSandbox,
+      asaasBillingType,
+      asaasFineValue: asaasFineValue !== undefined ? Number(asaasFineValue) : undefined,
+      asaasInterestValue: asaasInterestValue !== undefined ? Number(asaasInterestValue) : undefined,
+      asaasDaysBeforeDueDate: asaasDaysBeforeDueDate !== undefined ? Number(asaasDaysBeforeDueDate) : undefined,
     });
 
     // Para configurações AI e Chatwoot, usar tenantId do usuário, ou parâmetro tenantId para SUPERADMIN
