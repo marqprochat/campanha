@@ -45,6 +45,23 @@ export interface DynamicLink {
     updatedAt: string;
 }
 
+export interface GroupCampaign {
+    id: string;
+    name: string;
+    targetType: 'GROUPS' | 'CATEGORY';
+    targetIds: string[];
+    messageType: string;
+    messageContent: string;
+    instanceName: string;
+    tenantId: string;
+    scheduledFor: string;
+    status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELED';
+    sentCount: number;
+    failedCount: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export const groupService = {
     // ============================================================================
     // GROUPS
@@ -199,6 +216,29 @@ export const groupService = {
 
     broadcastToCategory: async (data: { instanceName: string; categoryId: string; message: { text?: string; image?: { url: string }; caption?: string } }) => {
         return api.post('/groups/broadcast/category', data);
+    },
+
+    // ============================================================================
+    // SCHEDULED CAMPAIGNS (GroupCampaign)
+    // ============================================================================
+    scheduleBroadcast: async (data: {
+        name: string;
+        targetType: 'GROUPS' | 'CATEGORY';
+        targetIds: string[];
+        messageType: string;
+        messageContent: any;
+        instanceName: string;
+        scheduledFor: string
+    }) => {
+        return api.post('/group-campaigns', data);
+    },
+
+    listScheduledBroadcasts: async () => {
+        return api.get<GroupCampaign[]>('/group-campaigns');
+    },
+
+    cancelScheduledBroadcast: async (id: string) => {
+        return api.post(`/group-campaigns/${id}/cancel`, {});
     },
 
     // ============================================================================

@@ -1,16 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Header } from '../components/Header';
-import { groupService, WhatsappGroup, WhatsAppInstance, DynamicLink } from '../services/groupService';
+import { groupService, WhatsappGroup, WhatsAppInstance, DynamicLink, GroupCampaign } from '../services/groupService';
 import { groupCategoryService, GroupCategory } from '../services/groupCategoryService';
 import { EmojiPicker } from '../components/EmojiPicker';
 import { LinkPreviewCard } from '../components/LinkPreviewCard';
 
 export function GroupManagementPage() {
-    const [activeTab, setActiveTab] = useState<'groups' | 'links' | 'broadcast' | 'categories'>('groups');
+    const [activeTab, setActiveTab] = useState<'groups' | 'links' | 'broadcast' | 'categories' | 'scheduled'>('groups');
     const [groups, setGroups] = useState<WhatsappGroup[]>([]);
     const [dynamicLinks, setDynamicLinks] = useState<DynamicLink[]>([]);
     const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
     const [categories, setCategories] = useState<GroupCategory[]>([]);
+    const [scheduledCampaigns, setScheduledCampaigns] = useState<GroupCampaign[]>([]);
     const [loading, setLoading] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -52,6 +53,8 @@ export function GroupManagementPage() {
     const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
     const [broadcastCategory, setBroadcastCategory] = useState('');
     const [broadcastMessage, setBroadcastMessage] = useState('');
+    const [broadcastName, setBroadcastName] = useState(''); // Used for scheduled campaigns
+    const [broadcastSchedule, setBroadcastSchedule] = useState(''); // ISO datetime-local
     const [broadcastStatus, setBroadcastStatus] = useState<any[]>([]);
 
     // Link Preview State
@@ -76,7 +79,17 @@ export function GroupManagementPage() {
         fetchDynamicLinks();
         fetchInstances();
         fetchCategories();
+        fetchScheduledCampaigns();
     }, []);
+
+    const fetchScheduledCampaigns = async () => {
+        try {
+            const data = await groupService.listScheduledBroadcasts();
+            setScheduledCampaigns(data || []);
+        } catch (error) {
+            console.error('Failed to fetch scheduled campaigns', error);
+        }
+    };
 
     const fetchGroups = async () => {
         setLoading(true);
@@ -277,39 +290,65 @@ export function GroupManagementPage() {
         try {
             // Build message payload
             const imageUrl = uploadedImage?.url || (linkPreview?.image ?? null);
-            const messagePayload: { text?: string; image?: { url: string }; caption?: string } = {};
+            const messagePayload: any = {};
+            let messageType = 'text';
 
             if (imageUrl) {
-                messagePayload.image = { url: imageUrl };
+                messagePayload.url = imageUrl;
                 messagePayload.caption = broadcastMessage;
+                // Basic assumption: images for now, could support video later depending on file
+                messageType = 'image';
             } else {
                 messagePayload.text = broadcastMessage;
             }
 
-            let results;
-            if (broadcastTarget === 'groups') {
-                results = await groupService.broadcast({
+            if (broadcastSchedule) {
+                if (!broadcastName) return alert('Dê um nome ao seu agendamento');
+
+                await groupService.scheduleBroadcast({
+                    name: broadcastName,
+                    targetType: broadcastTarget === 'groups' ? 'GROUPS' : 'CATEGORY',
+                    targetIds: broadcastTarget === 'groups' ? selectedGroups : [broadcastCategory],
+                    messageType,
+                    messageContent: messagePayload,
                     instanceName,
-                    groupIds: selectedGroups,
-                    message: messagePayload
+                    scheduledFor: new Date(broadcastSchedule).toISOString()
                 });
+
+                alert('Disparo agendado com sucesso!');
+                setBroadcastName('');
+                setBroadcastSchedule('');
+                setActiveTab('scheduled');
+                fetchScheduledCampaigns();
             } else {
-                results = await groupService.broadcastToCategory({
-                    instanceName,
-                    categoryId: broadcastCategory,
-                    message: messagePayload
-                });
+                let results;
+                const formattedPayload = imageUrl ? { image: { url: messagePayload.url }, caption: messagePayload.caption } : { text: messagePayload.text };
+
+                if (broadcastTarget === 'groups') {
+                    results = await groupService.broadcast({
+                        instanceName,
+                        groupIds: selectedGroups,
+                        message: formattedPayload
+                    });
+                } else {
+                    results = await groupService.broadcastToCategory({
+                        instanceName,
+                        categoryId: broadcastCategory,
+                        message: formattedPayload
+                    });
+                }
+
+                setBroadcastStatus(results);
+                alert('Disparo imediato concluído');
             }
 
-            setBroadcastStatus(results);
             setBroadcastMessage('');
             setLinkPreview(null);
             setUploadedImage(null);
             lastDetectedUrl.current = '';
-            alert('Disparo concluído');
         } catch (error) {
             console.error(error);
-            alert('Erro no disparo');
+            alert('Erro no processo de disparo');
         }
     };
 
@@ -437,6 +476,18 @@ export function GroupManagementPage() {
         }
     };
 
+    const handleCancelCampaign = async (id: string) => {
+        if (!confirm('Deseja realmente cancelar este agendamento?')) return;
+        try {
+            await groupService.cancelScheduledBroadcast(id);
+            alert('Agendamento cancelado com sucesso!');
+            fetchScheduledCampaigns();
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao cancelar agendamento');
+        }
+    };
+
     const connectedInstances = instances.filter(i => i.status === 'WORKING');
 
     return (
@@ -476,6 +527,13 @@ export function GroupManagementPage() {
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                         Disparos
+                    </button>
+                    <button
+                        onClick={() => { setActiveTab('scheduled'); fetchScheduledCampaigns(); }}
+                        className={`px-4 py-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${activeTab === 'scheduled' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        Agendamentos
                     </button>
                 </div>
 
@@ -898,8 +956,21 @@ export function GroupManagementPage() {
                             </div>
 
                             <div className="bg-white p-4 rounded shadow space-y-4">
-                                <h3 className="font-medium">Mensagem</h3>
-                                <div className="relative">
+                                <h3 className="font-medium">Configuração do Disparo</h3>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Nome (para Disparos Agendados)</label>
+                                    <input type="text" value={broadcastName} onChange={e => setBroadcastName(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="Nome da Campanha" />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Agendar Para (Opcional)</label>
+                                    <input type="datetime-local" value={broadcastSchedule} onChange={e => setBroadcastSchedule(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" />
+                                    <p className="text-xs text-gray-500 mt-1">Se não preencher, o disparo será imediato.</p>
+                                </div>
+
+                                <div className="relative pt-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Mensagem</label>
                                     <textarea ref={textareaRef} value={broadcastMessage} onChange={e => setBroadcastMessage(e.target.value)} rows={5} className="w-full rounded-md border-gray-300 shadow-sm p-2 pb-10 border" placeholder="Digite sua mensagem de broadcast aqui..." />
                                     <div className="absolute bottom-2 left-2 flex items-center gap-1">
                                         <EmojiPicker onEmojiSelect={handleEmojiSelect} />
@@ -920,8 +991,11 @@ export function GroupManagementPage() {
                                     </div>
                                 )}
 
-                                <button onClick={handleBroadcast} disabled={!instanceName || !broadcastMessage} className="w-full btn-primary bg-green-600 text-white py-2 rounded">
-                                    Enviar {broadcastTarget === 'groups' ? `para ${selectedGroups.length} grupos` : 'para categoria'}
+                                <button onClick={handleBroadcast} disabled={!instanceName || !broadcastMessage || (!!broadcastSchedule && !broadcastName)} className={`w-full btn-primary text-white py-2 rounded ${broadcastSchedule ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-green-600 hover:bg-green-700'}`}>
+                                    {broadcastSchedule
+                                        ? `Agendar ${broadcastTarget === 'groups' ? `para ${selectedGroups.length} grupos` : 'para categoria'}`
+                                        : `Enviar Imediatamente ${broadcastTarget === 'groups' ? `para ${selectedGroups.length} grupos` : 'para categoria'}`
+                                    }
                                 </button>
                             </div>
                         </div>
@@ -934,6 +1008,67 @@ export function GroupManagementPage() {
                                 </div>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {activeTab === 'scheduled' && (
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-lg font-semibold">Agendamentos de Disparos para Grupos</h2>
+                            <button onClick={fetchScheduledCampaigns} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md shadow-sm text-sm">Atualizar</button>
+                        </div>
+
+                        <div className="bg-white rounded-lg shadow overflow-hidden">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alvo</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data/Hora</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resultados</th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {scheduledCampaigns.map(campaign => (
+                                        <tr key={campaign.id}>
+                                            <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{campaign.name}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {campaign.targetType === 'GROUPS' ? `${campaign.targetIds.length} Grupos` : 'Categoria'}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {new Date(campaign.scheduledFor).toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                                    ${campaign.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                                                        campaign.status === 'RUNNING' ? 'bg-blue-100 text-blue-800' :
+                                                            campaign.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                                                campaign.status === 'CANCELED' ? 'bg-gray-100 text-gray-800' :
+                                                                    'bg-red-100 text-red-800'}`}>
+                                                    {campaign.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                Sucesso: <span className="text-green-600 font-medium">{campaign.sentCount}</span> /
+                                                Falha: <span className="text-red-600 font-medium">{campaign.failedCount}</span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                {campaign.status === 'PENDING' && (
+                                                    <button onClick={() => handleCancelCampaign(campaign.id)} className="text-red-600 hover:text-red-900">Cancelar</button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {scheduledCampaigns.length === 0 && (
+                                        <tr>
+                                            <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">Nenhum agendamento encontrado.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
             </div>

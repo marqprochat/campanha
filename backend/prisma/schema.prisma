@@ -26,6 +26,7 @@ model Tenant {
   contacts         Contact[]
   categories       Category[]
   campaigns        Campaign[]
+  groupCampaigns   GroupCampaign[]
   campaignMessages CampaignMessage[]
   whatsappSessions WhatsAppSession[]
   quotas           TenantQuota?
@@ -718,4 +719,27 @@ model DynamicLink {
 
   @@index([tenantId])
   @@map("dynamic_links")
+}
+
+model GroupCampaign {
+  id             String   @id @default(uuid())
+  name           String
+  targetType     String   // 'GROUPS' | 'CATEGORY'
+  targetIds      String[] // Array of Group IDs or Category IDs
+  messageType    String   // 'text', 'image', 'video', 'audio', 'document'
+  messageContent String   @db.Text
+  instanceName   String
+  tenantId       String   @map("tenant_id")
+  scheduledFor   DateTime @map("scheduled_for")
+  status         String   @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED, CANCELED
+  sentCount      Int      @default(0) @map("sent_count")
+  failedCount    Int      @default(0) @map("failed_count")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([status, scheduledFor])
+  @@map("group_campaigns")
 }

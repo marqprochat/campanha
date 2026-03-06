@@ -32,10 +32,12 @@ import { groupRoutes } from './routes/groupRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 import stripeWebhookRoutes from './routes/stripeWebhookRoutes';
 import planRoutes from './routes/planRoutes';
+import groupCampaignRoutes from './routes/groupCampaign';
 
 // Services
 import { authMiddleware } from './middleware/auth';
 import './services/campaignSchedulerService';
+import { groupCampaignSchedulerService } from './services/groupCampaignSchedulerService';
 import { initializeAlertsMonitoring } from './services/alertsMonitoringService';
 import { initializeBackupService } from './services/backupService';
 import { websocketService } from './services/websocketService';
@@ -140,6 +142,7 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/media', authMiddleware, mediaRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/plans', authMiddleware, planRoutes);
+app.use('/api/group-campaigns', authMiddleware, groupCampaignRoutes);
 app.use('/api', authMiddleware, mockRoutes);
 
 server.listen(PORT, () => {
@@ -147,4 +150,5 @@ server.listen(PORT, () => {
   websocketService.initialize(server);
   initializeAlertsMonitoring();
   initializeBackupService();
+  groupCampaignSchedulerService.start();
 });
