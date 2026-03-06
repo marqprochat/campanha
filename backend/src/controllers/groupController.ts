@@ -215,12 +215,25 @@ export async function syncGroups(req: Request, res: Response) {
 
 export async function createDynamicLink(req: Request, res: Response) {
     try {
-        const { slug, name, baseGroupName, instanceName, groupCapacity, initialParticipants, adminOnly, adminNumbers, description, image, categoryId } = req.body;
+        const { slug: rawSlug, name, baseGroupName, instanceName, groupCapacity, initialParticipants, adminOnly, adminNumbers, description, image, categoryId } = req.body;
         const tenantId = (req as any).tenantId;
 
-        if (!slug || !name || !baseGroupName || !instanceName) {
+        if (!rawSlug || !name || !baseGroupName || !instanceName) {
             return res.status(400).json({
                 error: 'slug, name, baseGroupName, and instanceName are required'
+            });
+        }
+
+        // Sanitize and validate slug
+        const slug = rawSlug
+            .toLowerCase()
+            .replace(/[^a-z0-9-]/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+
+        if (!slug || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug)) {
+            return res.status(400).json({
+                error: 'Slug inválido. Use apenas letras minúsculas, números e hífens.'
             });
         }
 

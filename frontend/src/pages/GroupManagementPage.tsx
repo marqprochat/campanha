@@ -756,8 +756,19 @@ export function GroupManagementPage() {
                                     <label className="block text-sm font-medium text-gray-700">Slug (URL)</label>
                                     <div className="mt-1 flex rounded-md shadow-sm">
                                         <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">/invite/</span>
-                                        <input type="text" className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 sm:text-sm" placeholder="vip-customers" id="dl-slug" />
+                                        <input type="text" className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 sm:text-sm" placeholder="vip-customers" id="dl-slug"
+                                            onChange={(e) => {
+                                                // Sanitize slug: lowercase, replace spaces and invalid chars with hyphens
+                                                let value = e.target.value
+                                                    .toLowerCase()
+                                                    .replace(/[^a-z0-9-]/g, '-') // replace any non-alphanumeric (except hyphen) with hyphen
+                                                    .replace(/-+/g, '-')          // collapse multiple hyphens
+                                                    .replace(/^-/, '');            // remove leading hyphen
+                                                e.target.value = value;
+                                            }}
+                                        />
                                     </div>
+                                    <p className="mt-1 text-xs text-gray-400">Apenas letras, números e hífens. Sem espaços ou caracteres especiais.</p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Nome Interno</label>
@@ -829,7 +840,7 @@ export function GroupManagementPage() {
                             </div>
                             <div className="mt-6">
                                 <button onClick={async () => {
-                                    const slug = (document.getElementById('dl-slug') as HTMLInputElement).value;
+                                    let slug = (document.getElementById('dl-slug') as HTMLInputElement).value;
                                     const name = (document.getElementById('dl-name') as HTMLInputElement).value;
                                     const baseGroupName = (document.getElementById('dl-baseName') as HTMLInputElement).value;
                                     const capacity = parseInt((document.getElementById('dl-capacity') as HTMLInputElement).value);
@@ -839,7 +850,10 @@ export function GroupManagementPage() {
                                     const dlDescription = (document.getElementById('dl-description') as HTMLTextAreaElement).value;
                                     const categoryId = (document.getElementById('dl-category') as HTMLSelectElement).value;
 
+                                    // Final slug sanitization before submit
+                                    slug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
                                     if (!slug || !name || !baseGroupName || !instanceName) return alert('Preencha os campos obrigatórios');
+                                    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug)) return alert('O slug deve conter apenas letras minúsculas, números e hífens.');
                                     const initialParticipants = participantsStr.split(',').map(p => p.trim()).filter(p => p);
                                     if (initialParticipants.length === 0) return alert('Adicione participantes iniciais');
 
