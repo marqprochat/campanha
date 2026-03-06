@@ -808,12 +808,23 @@ export function GroupManagementPage() {
                                     <input ref={linkImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleLinkImageUpload} />
                                 </div>
                             </div>
-                            <div className="mt-4">
-                                <label className="block text-sm font-medium text-gray-700">Instância</label>
-                                <select id="dl-instance" value={instanceName} onChange={e => setInstanceName(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2 border">
-                                    <option value="">Selecione...</option>
-                                    {connectedInstances.map(i => <option key={i.name} value={i.name}>{i.displayName || i.name}</option>)}
-                                </select>
+                            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Instância</label>
+                                    <select id="dl-instance" value={instanceName} onChange={e => setInstanceName(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2 border">
+                                        <option value="">Selecione...</option>
+                                        {connectedInstances.map(i => <option key={i.name} value={i.name}>{i.displayName || i.name}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Categoria (Opcional)</label>
+                                    <select id="dl-category" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2 border">
+                                        <option value="">Sem Categoria</option>
+                                        {categories.map(cat => (
+                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                             <div className="mt-6">
                                 <button onClick={async () => {
@@ -825,6 +836,7 @@ export function GroupManagementPage() {
                                     const dlAdminOnly = (document.getElementById('dl-adminOnly') as HTMLInputElement).checked;
                                     const dlAdminNumbersStr = (document.getElementById('dl-adminNumbers') as HTMLInputElement).value;
                                     const dlDescription = (document.getElementById('dl-description') as HTMLTextAreaElement).value;
+                                    const categoryId = (document.getElementById('dl-category') as HTMLSelectElement).value;
 
                                     if (!slug || !name || !baseGroupName || !instanceName) return alert('Preencha os campos obrigatórios');
                                     const initialParticipants = participantsStr.split(',').map(p => p.trim()).filter(p => p);
@@ -841,6 +853,7 @@ export function GroupManagementPage() {
                                             adminOnly: dlAdminOnly,
                                             adminNumbers: dlAdminNumbersStr.split(',').map(p => p.trim()).filter(p => p),
                                             description: dlDescription,
+                                            categoryId: categoryId || undefined,
                                             image: dynamicLinkImage || undefined
                                         }, (message) => {
                                             if (message.type === 'progress') {
@@ -855,6 +868,7 @@ export function GroupManagementPage() {
                                                     (document.getElementById('dl-slug') as HTMLInputElement).value = '';
                                                     (document.getElementById('dl-name') as HTMLInputElement).value = '';
                                                     (document.getElementById('dl-baseName') as HTMLInputElement).value = '';
+                                                    (document.getElementById('dl-category') as HTMLSelectElement).value = '';
                                                     fetchDynamicLinks();
                                                 }, 1500);
                                             } else if (message.type === 'error') {

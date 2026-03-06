@@ -215,7 +215,7 @@ export async function syncGroups(req: Request, res: Response) {
 
 export async function createDynamicLink(req: Request, res: Response) {
     try {
-        const { slug, name, baseGroupName, instanceName, groupCapacity, initialParticipants, adminOnly, adminNumbers, description, image } = req.body;
+        const { slug, name, baseGroupName, instanceName, groupCapacity, initialParticipants, adminOnly, adminNumbers, description, image, categoryId } = req.body;
         const tenantId = (req as any).tenantId;
 
         if (!slug || !name || !baseGroupName || !instanceName) {
@@ -247,6 +247,7 @@ export async function createDynamicLink(req: Request, res: Response) {
                     adminNumbers,
                     description,
                     image,
+                    categoryId,
                     onProgress: (step) => {
                         res.write(`data: ${JSON.stringify({ type: 'progress', step })}\n\n`);
                     }
@@ -271,7 +272,8 @@ export async function createDynamicLink(req: Request, res: Response) {
                 adminOnly,
                 adminNumbers,
                 description,
-                image
+                image,
+                categoryId
             });
 
             res.status(201).json(dynamicLink);

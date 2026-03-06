@@ -36,6 +36,7 @@ interface CreateDynamicLinkParams {
     adminNumbers?: string[];
     description?: string;
     image?: string;
+    categoryId?: string;
     onProgress?: (step: string) => void;
 }
 
@@ -287,7 +288,7 @@ export class GroupService {
     // ============================================================================
 
     async createDynamicLink(params: CreateDynamicLinkParams): Promise<DynamicLink> {
-        const { slug, name, baseGroupName, instanceName, tenantId, groupCapacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [], description, image, onProgress } = params;
+        const { slug, name, baseGroupName, instanceName, tenantId, groupCapacity = 1023, initialParticipants = [], adminOnly = false, adminNumbers = [], description, image, categoryId, onProgress } = params;
 
         console.log(`🔗 Creating dynamic link '${slug}' for groups named '${baseGroupName}'`);
 
@@ -301,6 +302,7 @@ export class GroupService {
             adminOnly,
             adminNumbers,
             description,
+            categoryId,
             imageUrl: image,
             onProgress
         });
@@ -319,6 +321,7 @@ export class GroupService {
                 adminOnly,
                 adminNumbers: adminNumbers.length > 0 ? adminNumbers.join(',') : null,
                 groupDescription: description || null,
+                categoryId: categoryId || null,
                 image
             }
         });
@@ -376,7 +379,8 @@ export class GroupService {
                 name: `${dynamicLink.baseGroupName} 1`,
                 instanceName: dynamicLink.instanceName,
                 tenantId: dynamicLink.tenantId,
-                capacity: dynamicLink.groupCapacity
+                capacity: dynamicLink.groupCapacity,
+                categoryId: dynamicLink.categoryId || undefined
             });
 
             await prisma.dynamicLink.update({
@@ -429,6 +433,7 @@ export class GroupService {
                 adminOnly: dynamicLink.adminOnly,
                 adminNumbers: savedAdminNumbers,
                 description: dynamicLink.groupDescription || undefined,
+                categoryId: dynamicLink.categoryId || undefined,
                 imageUrl: dynamicLink.image || undefined
             });
 

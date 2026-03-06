@@ -41,6 +41,7 @@ export interface DynamicLink {
     activeGroup?: WhatsappGroup;
     activeGroupId?: string;
     image?: string | null;
+    categoryId?: string | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -142,12 +143,12 @@ export const groupService = {
     // ============================================================================
     // DYNAMIC LINKS
     // ============================================================================
-    createDynamicLink: async (data: { slug: string; name: string; baseGroupName: string; instanceName: string; groupCapacity?: number; initialParticipants?: string[]; adminOnly?: boolean; adminNumbers?: string[]; description?: string; image?: string }) => {
+    createDynamicLink: async (data: { slug: string; name: string; baseGroupName: string; instanceName: string; groupCapacity?: number; initialParticipants?: string[]; adminOnly?: boolean; adminNumbers?: string[]; description?: string; image?: string; categoryId?: string }) => {
         return api.post('/groups/dynamic-links', data);
     },
 
     createDynamicLinkStreaming: async (
-        data: { slug: string; name: string; baseGroupName: string; instanceName: string; groupCapacity?: number; initialParticipants?: string[]; adminOnly?: boolean; adminNumbers?: string[]; description?: string; image?: string },
+        data: { slug: string; name: string; baseGroupName: string; instanceName: string; groupCapacity?: number; initialParticipants?: string[]; adminOnly?: boolean; adminNumbers?: string[]; description?: string; image?: string; categoryId?: string },
         onMessage: (message: any) => void
     ) => {
         const token = localStorage.getItem('auth_token');
