@@ -289,15 +289,10 @@ export class EvolutionApiService {
   }
 
   async leaveGroup(instanceName: string, groupJid: string): Promise<any> {
-    const requestData = {
-      groupJid
-    };
-
     console.log(`👋 Leaving group ${groupJid} on instance ${instanceName}`);
 
-    const response = await this.makeRequest(`/group/leaveGroup/${instanceName}`, {
-      method: 'POST',
-      body: JSON.stringify(requestData)
+    const response = await this.makeRequest(`/group/leaveGroup/${instanceName}?groupJid=${groupJid}`, {
+      method: 'DELETE'
     });
 
     return await response.json();
