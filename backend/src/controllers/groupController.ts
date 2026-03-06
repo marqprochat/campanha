@@ -11,7 +11,7 @@ const tenantSettingsService = new TenantSettingsService();
 
 // Multer configuration for group images
 const getUploadDir = () => {
-    return process.env.NODE_ENV === 'production' ? '/app/uploads' : './uploads';
+    return process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
 };
 
 const storage = multer.diskStorage({

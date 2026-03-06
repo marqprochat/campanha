@@ -118,7 +118,7 @@ export class GroupService {
                     const fs = require('fs');
                     const path = require('path');
                     const filename = imageUrl.replace('/api/uploads/', '');
-                    const uploadDir = process.env.NODE_ENV === 'production' ? '/app/uploads' : path.join(process.cwd(), 'uploads');
+                    const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
                     const filePath = path.join(uploadDir, filename);
 
                     if (fs.existsSync(filePath)) {
@@ -130,7 +130,7 @@ export class GroupService {
 
                         // Evolution API usually accepts base64 with or without data URL prefix, 
                         // but setting the base64 encoded string directly is safer for whatsapp-baileys
-                        finalImage = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
+                        finalImage = fileBuffer.toString('base64');
                     }
                 }
 

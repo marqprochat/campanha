@@ -48,9 +48,7 @@ const PORT = process.env.PORT || 3001;
 app.set('trust proxy', 1);
 
 // Upload directory configuration
-const uploadDir = process.env.NODE_ENV === 'production'
-  ? '/app/uploads'
-  : './uploads'; // Check relative path if needed, often relative to process.cwd()
+const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });

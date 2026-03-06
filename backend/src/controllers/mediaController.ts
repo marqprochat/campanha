@@ -6,7 +6,7 @@ import fs from 'fs';
 // Configuração do multer para upload de arquivos de mídia
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = '/app/uploads';
+    const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
@@ -85,7 +85,7 @@ export const uploadMediaFile = [
 // Listar arquivos de mídia
 export const listMediaFiles = async (req: Request, res: Response) => {
   try {
-    const uploadDir = '/app/uploads';
+    const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
 
     if (!fs.existsSync(uploadDir)) {
       return res.json({ files: [] });
@@ -122,7 +122,7 @@ export const deleteMediaFile = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Nome de arquivo inválido' });
     }
 
-    const filePath = path.join('/app/uploads', filename);
+    const filePath = path.join(process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads'), filename);
 
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: 'Arquivo não encontrado' });

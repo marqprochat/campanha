@@ -627,7 +627,7 @@ export class BackupService {
 
       // 2. Copiar uploads
       console.log('📁 Copiando arquivos de upload...');
-      const uploadsPath = '/app/uploads';
+      const uploadsPath = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
       const uploadsBackupPath = path.join(tempDir, 'uploads');
 
       if (fs.existsSync(uploadsPath)) {
@@ -820,7 +820,7 @@ export class BackupService {
       // 4. Restaurar uploads
       console.log('📁 Restaurando arquivos de upload...');
       const uploadsBackupPath = path.join(tempDir, 'uploads');
-      const uploadsPath = '/app/uploads';
+      const uploadsPath = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
 
       if (fs.existsSync(uploadsBackupPath)) {
         // Limpar uploads atuais (exceto arquivos padrão)

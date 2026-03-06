@@ -5,7 +5,7 @@ import fs from 'fs';
 
 // Helper to determine upload directory
 const getUploadDir = () => {
-    return process.env.NODE_ENV === 'production' ? '/app/uploads' : './uploads';
+    return process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
 };
 
 // Ensure directory exists
