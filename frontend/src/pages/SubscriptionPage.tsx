@@ -7,6 +7,10 @@ export function SubscriptionPage() {
     const [plans, setPlans] = useState<Plan[]>([]);
     const [subscription, setSubscription] = useState<Subscription | null>(null);
     const [loading, setLoading] = useState(true);
+    const [cpfCnpj, setCpfCnpj] = useState('');
+    const [subscribingPlanId, setSubscribingPlanId] = useState<string | null>(null);
+    const [showCpfModal, setShowCpfModal] = useState(false);
+    const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
 
     useEffect(() => {
         loadData();
@@ -28,14 +32,53 @@ export function SubscriptionPage() {
         }
     };
 
-    const handleSubscribe = async (plan: Plan) => {
+    const handleSubscribeClick = (plan: Plan) => {
+        setSelectedPlan(plan);
+        setShowCpfModal(true);
+    };
+
+    const handleConfirmSubscription = async () => {
+        if (!selectedPlan) return;
+
+        const cleaned = cpfCnpj.replace(/[.\-\/\s]/g, '');
+        if (!cleaned || (cleaned.length !== 11 && cleaned.length !== 14)) {
+            toast.error('Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.');
+            return;
+        }
+
         try {
-            toast.loading('Redirecionando para o pagamento...');
-            const { url } = await planService.createCheckoutSession(plan.id);
-            window.location.href = url;
+            setSubscribingPlanId(selectedPlan.id);
+            toast.loading('Criando assinatura e gerando pagamento...');
+            const { url } = await planService.createCheckoutSession(selectedPlan.id, cleaned);
+            toast.dismiss();
+            setShowCpfModal(false);
+            window.open(url, '_blank');
+            toast.success('Link de pagamento aberto em nova aba!');
         } catch (err: any) {
             toast.dismiss();
             toast.error(err.message || 'Erro ao iniciar pagamento');
+        } finally {
+            setSubscribingPlanId(null);
+        }
+    };
+
+    // Format CPF/CNPJ as user types
+    const formatCpfCnpj = (value: string) => {
+        const digits = value.replace(/\D/g, '');
+        if (digits.length <= 11) {
+            // CPF: 000.000.000-00
+            return digits
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        } else {
+            // CNPJ: 00.000.000/0000-00
+            return digits
+                .substring(0, 14)
+                .replace(/(\d{2})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d)/, '$1/$2')
+                .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
         }
     };
 
@@ -85,16 +128,59 @@ export function SubscriptionPage() {
                                 </button>
                             ) : (
                                 <button
-                                    onClick={() => handleSubscribe(plan)}
-                                    className="w-full py-3 rounded-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                                    onClick={() => handleSubscribeClick(plan)}
+                                    disabled={subscribingPlanId === plan.id}
+                                    className="w-full py-3 rounded-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
                                 >
-                                    {subscription ? 'Mudar para Plano' : 'Assinar'}
+                                    {subscribingPlanId === plan.id ? 'Processando...' : subscription ? 'Mudar para Plano' : 'Assinar'}
                                 </button>
                             )}
                         </div>
                     </div>
                 ))}
             </div>
+
+            {/* CPF/CNPJ Modal */}
+            {showCpfModal && selectedPlan && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">Dados para Cobrança</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Informe seu CPF ou CNPJ para gerar a cobrança do plano <strong>{selectedPlan.name}</strong>.
+                        </p>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">CPF ou CNPJ *</label>
+                            <input
+                                type="text"
+                                value={cpfCnpj}
+                                onChange={(e) => setCpfCnpj(formatCpfCnpj(e.target.value))}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                                placeholder="000.000.000-00"
+                                maxLength={18}
+                                autoFocus
+                            />
+                            <p className="text-xs text-gray-500 mt-1">CPF (pessoa física) ou CNPJ (pessoa jurídica)</p>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => { setShowCpfModal(false); setSelectedPlan(null); }}
+                                className="flex-1 py-3 rounded-lg font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleConfirmSubscription}
+                                disabled={!!subscribingPlanId}
+                                className="flex-1 py-3 rounded-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                            >
+                                {subscribingPlanId ? 'Processando...' : 'Confirmar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

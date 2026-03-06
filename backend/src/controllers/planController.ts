@@ -73,12 +73,12 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Tenant is required' });
         }
 
-        const { planId } = req.body;
+        const { planId, cpfCnpj } = req.body;
         if (!planId) {
             return res.status(400).json({ error: 'planId é obrigatório' });
         }
 
-        const result = await asaasService.createSubscription(tenantId, planId);
+        const result = await asaasService.createSubscription(tenantId, planId, cpfCnpj);
         res.json({ url: result.invoiceUrl });
     } catch (error: any) {
         console.error('Asaas subscription error:', error);

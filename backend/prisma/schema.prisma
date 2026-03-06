@@ -42,6 +42,7 @@ model Tenant {
   dynamicLinks     DynamicLink[]
 
   // Billing
+  cpfCnpj         String?       @map("cpf_cnpj")
   asaasCustomerId String?       @map("asaas_customer_id")
   subscription    Subscription?
 

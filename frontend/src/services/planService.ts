@@ -47,7 +47,7 @@ export const planService = {
         return api.get<Subscription | null>('/plans/subscription/current');
     },
 
-    async createCheckoutSession(planId: string): Promise<{ url: string }> {
-        return api.post('/plans/subscription/checkout', { planId });
+    async createCheckoutSession(planId: string, cpfCnpj?: string): Promise<{ url: string }> {
+        return api.post('/plans/subscription/checkout', { planId, cpfCnpj });
     },
 };
