@@ -683,8 +683,9 @@ model GroupCategory {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relations
-  groups WhatsappGroup[]
-  tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  groups       WhatsappGroup[]
+  dynamicLinks DynamicLink[]
+  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -711,6 +712,10 @@ model DynamicLink {
   activeGroupId String?        @map("active_group_id")
   activeGroup   WhatsappGroup? @relation(fields: [activeGroupId], references: [id])
 
+  // Category for auto-created groups
+  categoryId String?        @map("category_id")
+  category   GroupCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
   tenantId String @map("tenant_id")
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -718,6 +723,7 @@ model DynamicLink {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([tenantId])
+  @@index([categoryId])
   @@map("dynamic_links")
 }
 
