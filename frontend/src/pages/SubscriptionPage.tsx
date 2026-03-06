@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { CreditCard, CheckCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import { planService, Plan, Subscription } from '../services/planService';
 
 export function SubscriptionPage() {
@@ -31,26 +31,11 @@ export function SubscriptionPage() {
     const handleSubscribe = async (plan: Plan) => {
         try {
             toast.loading('Redirecionando para o pagamento...');
-            const { url } = await planService.createCheckoutSession(
-                plan.id,
-                `${window.location.origin}/configuracoes/assinatura?success=true`,
-                `${window.location.origin}/configuracoes/assinatura?canceled=true`
-            );
+            const { url } = await planService.createCheckoutSession(plan.id);
             window.location.href = url;
         } catch (err: any) {
             toast.dismiss();
             toast.error(err.message || 'Erro ao iniciar pagamento');
-        }
-    };
-
-    const handleManage = async () => {
-        try {
-            toast.loading('Abrindo portal...');
-            const { url } = await planService.createPortalSession(`${window.location.origin}/configuracoes/assinatura`);
-            window.location.href = url;
-        } catch (err: any) {
-            toast.dismiss();
-            toast.error(err.message || 'Erro ao acessar portal do cliente');
         }
     };
 
@@ -62,21 +47,12 @@ export function SubscriptionPage() {
 
             {subscription && (
                 <div className="bg-white rounded-xl shadow p-6 mb-8 border-l-4 border-blue-500">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <h2 className="text-lg font-bold text-gray-800">Plano Atual: {subscription.plan.name}</h2>
-                            <p className="text-gray-500 mt-1">Status: <span className="font-medium capitalize">{subscription.status}</span></p>
-                            {subscription.currentPeriodEnd && (
-                                <p className="text-sm text-gray-400 mt-1">Renova em: {new Date(subscription.currentPeriodEnd).toLocaleDateString()}</p>
-                            )}
-                        </div>
-                        <button
-                            onClick={handleManage}
-                            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                            <CreditCard size={20} />
-                            Gerenciar Pagamento
-                        </button>
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-800">Plano Atual: {subscription.plan.name}</h2>
+                        <p className="text-gray-500 mt-1">Status: <span className="font-medium capitalize">{subscription.status}</span></p>
+                        {subscription.currentPeriodEnd && (
+                            <p className="text-sm text-gray-400 mt-1">Renova em: {new Date(subscription.currentPeriodEnd).toLocaleDateString()}</p>
+                        )}
                     </div>
                 </div>
             )}

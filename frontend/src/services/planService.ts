@@ -4,8 +4,6 @@ export interface Plan {
     id: string;
     name: string;
     description: string | null;
-    stripeProductId: string | null;
-    stripePriceId: string | null;
     price: number;
     interval: string;
     maxUsers: number;
@@ -20,8 +18,8 @@ export interface Subscription {
     id: string;
     tenantId: string;
     planId: string;
-    stripeSubscriptionId: string | null;
-    stripeCustomerId: string | null;
+    asaasSubscriptionId: string | null;
+    asaasCustomerId: string | null;
     status: string;
     currentPeriodStart: string | null;
     currentPeriodEnd: string | null;
@@ -49,15 +47,7 @@ export const planService = {
         return api.get<Subscription | null>('/plans/subscription/current');
     },
 
-    async createCheckoutSession(planId: string, successUrl: string, cancelUrl: string): Promise<{ url: string }> {
-        return api.post('/plans/subscription/checkout', {
-            planId,
-            successUrl,
-            cancelUrl
-        });
+    async createCheckoutSession(planId: string): Promise<{ url: string }> {
+        return api.post('/plans/subscription/checkout', { planId });
     },
-
-    async createPortalSession(returnUrl: string): Promise<{ url: string }> {
-        return api.post('/plans/subscription/portal', { returnUrl });
-    }
 };

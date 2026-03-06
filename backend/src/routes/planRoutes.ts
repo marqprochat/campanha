@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createPlan, updatePlan, listPlans, getCurrentSubscription, createCheckoutSession, createPortalSession } from '../controllers/planController';
+import { createPlan, updatePlan, listPlans, getCurrentSubscription, createCheckoutSession } from '../controllers/planController';
 
 const router = Router();
 
@@ -11,6 +11,5 @@ router.get('/', listPlans);
 // Subscriptions
 router.get('/subscription/current', getCurrentSubscription);
 router.post('/subscription/checkout', createCheckoutSession);
-router.post('/subscription/portal', createPortalSession);
 
 export default router;

@@ -73,6 +73,13 @@ export class SettingsService {
     pageTitle?: string;
     iconUrl?: string | null;
     primaryColor?: string | null;
+    asaasApiKey?: string | null;
+    asaasWebhookToken?: string | null;
+    asaasSandbox?: boolean;
+    asaasBillingType?: string;
+    asaasFineValue?: number;
+    asaasInterestValue?: number;
+    asaasDaysBeforeDueDate?: number;
   }) {
     try {
       // Buscar configuração existente
@@ -95,7 +102,14 @@ export class SettingsService {
             faviconUrl: data.faviconUrl !== undefined ? data.faviconUrl : settings.faviconUrl,
             pageTitle: data.pageTitle !== undefined ? data.pageTitle : settings.pageTitle,
             iconUrl: data.iconUrl !== undefined ? data.iconUrl : settings.iconUrl,
-            primaryColor: data.primaryColor !== undefined ? data.primaryColor : settings.primaryColor
+            primaryColor: data.primaryColor !== undefined ? data.primaryColor : settings.primaryColor,
+            asaasApiKey: data.asaasApiKey !== undefined ? data.asaasApiKey : settings.asaasApiKey,
+            asaasWebhookToken: data.asaasWebhookToken !== undefined ? data.asaasWebhookToken : settings.asaasWebhookToken,
+            asaasSandbox: data.asaasSandbox !== undefined ? data.asaasSandbox : settings.asaasSandbox,
+            asaasBillingType: data.asaasBillingType !== undefined ? data.asaasBillingType : settings.asaasBillingType,
+            asaasFineValue: data.asaasFineValue !== undefined ? data.asaasFineValue : settings.asaasFineValue,
+            asaasInterestValue: data.asaasInterestValue !== undefined ? data.asaasInterestValue : settings.asaasInterestValue,
+            asaasDaysBeforeDueDate: data.asaasDaysBeforeDueDate !== undefined ? data.asaasDaysBeforeDueDate : settings.asaasDaysBeforeDueDate,
           }
         });
       } else {
@@ -160,6 +174,20 @@ export class SettingsService {
       url: settings.quepasaUrl,
       login: settings.quepasaLogin,
       password: settings.quepasaPassword
+    };
+  }
+
+  // Método para obter configurações do Asaas
+  async getAsaasConfig() {
+    const settings = await this.getSettings();
+    return {
+      apiKey: (settings as any).asaasApiKey || '',
+      webhookToken: (settings as any).asaasWebhookToken || '',
+      sandbox: (settings as any).asaasSandbox !== false,
+      billingType: (settings as any).asaasBillingType || 'UNDEFINED',
+      fineValue: (settings as any).asaasFineValue || 0,
+      interestValue: (settings as any).asaasInterestValue || 0,
+      daysBeforeDueDate: (settings as any).asaasDaysBeforeDueDate || 0,
     };
   }
 }

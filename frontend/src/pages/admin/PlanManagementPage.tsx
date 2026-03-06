@@ -93,14 +93,13 @@ export function PlanManagementPage() {
                             <th className="p-4 font-medium text-sm text-gray-500">Nome</th>
                             <th className="p-4 font-medium text-sm text-gray-500">Preço</th>
                             <th className="p-4 font-medium text-sm text-gray-500">Limites</th>
-                            <th className="p-4 font-medium text-sm text-gray-500">Stripe IDs</th>
                             <th className="p-4 font-medium text-sm text-gray-500">Ações</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                         {isEditing === 'new' && (
                             <tr className="bg-blue-50">
-                                <td className="p-4" colSpan={5}>
+                                <td className="p-4" colSpan={4}>
                                     <div className="grid grid-cols-2 gap-4">
                                         <input type="text" placeholder="Nome" className="px-3 py-2 border rounded" value={editForm.name || ''} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
                                         <input type="number" placeholder="Preço" className="px-3 py-2 border rounded" value={editForm.price || ''} onChange={e => setEditForm({ ...editForm, price: parseFloat(e.target.value) })} />
@@ -109,8 +108,6 @@ export function PlanManagementPage() {
                                         <input type="number" placeholder="Max Campanhas" className="px-3 py-2 border rounded" value={editForm.maxCampaigns || ''} onChange={e => setEditForm({ ...editForm, maxCampaigns: parseInt(e.target.value) })} />
                                         <input type="number" placeholder="Max Conexões" className="px-3 py-2 border rounded" value={editForm.maxConnections || ''} onChange={e => setEditForm({ ...editForm, maxConnections: parseInt(e.target.value) })} />
                                         <input type="number" placeholder="Max Grupos" className="px-3 py-2 border rounded" value={editForm.maxGroups || ''} onChange={e => setEditForm({ ...editForm, maxGroups: parseInt(e.target.value) })} />
-                                        <input type="text" placeholder="Stripe Product ID" className="px-3 py-2 border rounded" value={editForm.stripeProductId || ''} onChange={e => setEditForm({ ...editForm, stripeProductId: e.target.value })} />
-                                        <input type="text" placeholder="Stripe Price ID" className="px-3 py-2 border rounded" value={editForm.stripePriceId || ''} onChange={e => setEditForm({ ...editForm, stripePriceId: e.target.value })} />
                                         <select className="px-3 py-2 border rounded" value={editForm.interval || 'month'} onChange={e => setEditForm({ ...editForm, interval: e.target.value })}>
                                             <option value="month">Mensal</option>
                                             <option value="year">Anual</option>
@@ -127,7 +124,7 @@ export function PlanManagementPage() {
                         {plans.map(plan => (
                             isEditing === plan.id ? (
                                 <tr key={plan.id} className="bg-blue-50">
-                                    <td className="p-4" colSpan={5}>
+                                    <td className="p-4" colSpan={4}>
                                         <div className="grid grid-cols-2 gap-4">
                                             <input type="text" placeholder="Nome" className="px-3 py-2 border rounded" value={editForm.name || ''} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
                                             <input type="number" placeholder="Preço" className="px-3 py-2 border rounded" value={editForm.price || ''} onChange={e => setEditForm({ ...editForm, price: parseFloat(e.target.value) })} />
@@ -136,8 +133,6 @@ export function PlanManagementPage() {
                                             <input type="number" placeholder="Max Campanhas" className="px-3 py-2 border rounded" value={editForm.maxCampaigns || ''} onChange={e => setEditForm({ ...editForm, maxCampaigns: parseInt(e.target.value) })} />
                                             <input type="number" placeholder="Max Conexões" className="px-3 py-2 border rounded" value={editForm.maxConnections || ''} onChange={e => setEditForm({ ...editForm, maxConnections: parseInt(e.target.value) })} />
                                             <input type="number" placeholder="Max Grupos" className="px-3 py-2 border rounded" value={editForm.maxGroups || ''} onChange={e => setEditForm({ ...editForm, maxGroups: parseInt(e.target.value) })} />
-                                            <input type="text" placeholder="Stripe Product ID" className="px-3 py-2 border rounded" value={editForm.stripeProductId || ''} onChange={e => setEditForm({ ...editForm, stripeProductId: e.target.value })} />
-                                            <input type="text" placeholder="Stripe Price ID" className="px-3 py-2 border rounded" value={editForm.stripePriceId || ''} onChange={e => setEditForm({ ...editForm, stripePriceId: e.target.value })} />
                                             <select className="px-3 py-2 border rounded" value={editForm.interval || 'month'} onChange={e => setEditForm({ ...editForm, interval: e.target.value })}>
                                                 <option value="month">Mensal</option>
                                                 <option value="year">Anual</option>
@@ -152,17 +147,13 @@ export function PlanManagementPage() {
                             ) : (
                                 <tr key={plan.id} className="hover:bg-gray-50">
                                     <td className="p-4 font-medium">{plan.name}</td>
-                                    <td className="p-4">R$ {plan.price} / {plan.interval}</td>
+                                    <td className="p-4">R$ {plan.price} / {plan.interval === 'year' ? 'ano' : 'mês'}</td>
                                     <td className="p-4 text-sm text-gray-600">
                                         <div>User: {plan.maxUsers}</div>
                                         <div>Ctt: {plan.maxContacts}</div>
                                         <div>Cmp: {plan.maxCampaigns}</div>
                                         <div>Wpp: {plan.maxConnections}</div>
                                         <div>Grp: {plan.maxGroups}</div>
-                                    </td>
-                                    <td className="p-4 text-sm text-gray-500">
-                                        <div>Prod: {plan.stripeProductId || '-'}</div>
-                                        <div>Price: {plan.stripePriceId || '-'}</div>
                                     </td>
                                     <td className="p-4">
                                         <button onClick={() => startEdit(plan)} className="p-1 hover:text-blue-600 rounded">
@@ -174,7 +165,7 @@ export function PlanManagementPage() {
                         ))}
                         {plans.length === 0 && isEditing !== 'new' && (
                             <tr>
-                                <td colSpan={5} className="p-8 text-center text-gray-500">
+                                <td colSpan={4} className="p-8 text-center text-gray-500">
                                     Nenhum plano cadastrado.
                                 </td>
                             </tr>

@@ -142,6 +142,13 @@ interface Settings {
   openaiApiKey?: string;
   groqApiKey?: string;
   primaryColor?: string;
+  asaasApiKey?: string;
+  asaasWebhookToken?: string;
+  asaasSandbox?: boolean;
+  asaasBillingType?: string;
+  asaasFineValue?: number;
+  asaasInterestValue?: number;
+  asaasDaysBeforeDueDate?: number;
 }
 
 const settingsSchema = z.object({
@@ -178,7 +185,7 @@ type GeneralSettingsFormData = z.infer<typeof generalSettingsSchema>;
 
 
 export function SuperAdminManagerPage() {
-  const [activeTab, setActiveTab] = useState<'general' | 'appearance' | 'integrations' | 'tenants' | 'users' | 'backup' | 'plans'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'appearance' | 'integrations' | 'tenants' | 'users' | 'backup' | 'plans' | 'payment'>('general');
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<SystemStats | null>(null);
@@ -240,6 +247,18 @@ export function SuperAdminManagerPage() {
   const [primaryColor, setPrimaryColor] = useState<string>('#21975f');
   const [savingPrimaryColor, setSavingPrimaryColor] = useState(false);
 
+  // Payment settings states
+  const [paymentSettings, setPaymentSettings] = useState({
+    asaasApiKey: '',
+    asaasWebhookToken: '',
+    asaasSandbox: true,
+    asaasBillingType: 'UNDEFINED',
+    asaasFineValue: 0,
+    asaasInterestValue: 0,
+    asaasDaysBeforeDueDate: 0,
+  });
+  const [savingPayment, setSavingPayment] = useState(false);
+
   useEffect(() => {
     loadData();
     if (activeTab === 'integrations') {
@@ -247,6 +266,9 @@ export function SuperAdminManagerPage() {
     }
     if (activeTab === 'general' || activeTab === 'appearance') {
       loadGeneralSettings();
+    }
+    if (activeTab === 'payment') {
+      loadPaymentSettings();
     }
   }, [activeTab]);
 
@@ -584,6 +606,51 @@ export function SuperAdminManagerPage() {
       toast.error('Erro ao salvar cor primária');
     } finally {
       setSavingPrimaryColor(false);
+    }
+  };
+
+  // Payment settings functions
+  const loadPaymentSettings = async () => {
+    try {
+      const response = await authenticatedFetch('/api/settings');
+      if (response.ok) {
+        const data = await response.json();
+        setPaymentSettings({
+          asaasApiKey: data.asaasApiKey || '',
+          asaasWebhookToken: data.asaasWebhookToken || '',
+          asaasSandbox: data.asaasSandbox !== false,
+          asaasBillingType: data.asaasBillingType || 'UNDEFINED',
+          asaasFineValue: data.asaasFineValue || 0,
+          asaasInterestValue: data.asaasInterestValue || 0,
+          asaasDaysBeforeDueDate: data.asaasDaysBeforeDueDate || 0,
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configurações de pagamento:', error);
+      toast.error('Erro ao carregar configurações de pagamento');
+    }
+  };
+
+  const savePaymentSettings = async () => {
+    setSavingPayment(true);
+    try {
+      const response = await authenticatedFetch('/api/settings', {
+        method: 'PUT',
+        body: JSON.stringify(paymentSettings),
+      });
+
+      if (response.ok) {
+        toast.success('Configurações de pagamento salvas com sucesso!');
+        loadPaymentSettings();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Erro ao salvar configurações de pagamento');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar configurações de pagamento:', error);
+      toast.error('Erro ao salvar configurações de pagamento');
+    } finally {
+      setSavingPayment(false);
     }
   };
 
@@ -1112,6 +1179,15 @@ export function SuperAdminManagerPage() {
               }`}
           >
             💳 Planos
+          </button>
+          <button
+            onClick={() => setActiveTab('payment')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'payment'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+          >
+            💰 Pagamento
           </button>
         </nav>
       </div>
@@ -1874,6 +1950,129 @@ export function SuperAdminManagerPage() {
       {activeTab === 'plans' && (
         <div className="bg-white rounded-lg shadow">
           <PlanManagementPage />
+        </div>
+      )}
+
+      {/* Payment Settings Tab */}
+      {activeTab === 'payment' && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold mb-2 text-gray-900">💰 Configurações de Pagamento (Asaas)</h2>
+          <p className="text-sm text-gray-600 mb-6">Configure a integração com o gateway de pagamentos Asaas para cobranças recorrentes dos planos.</p>
+
+          <div className="space-y-6">
+            {/* API Key */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">API Key do Asaas *</label>
+              <input
+                type="password"
+                value={paymentSettings.asaasApiKey}
+                onChange={(e) => setPaymentSettings({ ...paymentSettings, asaasApiKey: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="$aact_..."
+              />
+              <p className="text-xs text-gray-500 mt-1">Encontre sua API Key em Minha Conta {'>'} Integrações no painel do Asaas.</p>
+            </div>
+
+            {/* Webhook Token */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Token do Webhook</label>
+              <input
+                type="text"
+                value={paymentSettings.asaasWebhookToken}
+                onChange={(e) => setPaymentSettings({ ...paymentSettings, asaasWebhookToken: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Token de autenticação do webhook"
+              />
+              <p className="text-xs text-gray-500 mt-1">Configure o webhook no Asaas apontando para: <code className="bg-gray-100 px-1 rounded">/api/webhooks/asaas</code></p>
+            </div>
+
+            {/* Sandbox Toggle */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Ambiente</label>
+                <p className="text-xs text-gray-500 mt-1">{paymentSettings.asaasSandbox ? 'Usando ambiente de testes (Sandbox)' : 'Usando ambiente de produção'}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPaymentSettings({ ...paymentSettings, asaasSandbox: !paymentSettings.asaasSandbox })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${paymentSettings.asaasSandbox ? 'bg-yellow-500' : 'bg-green-600'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${paymentSettings.asaasSandbox ? 'translate-x-1' : 'translate-x-6'}`} />
+              </button>
+              <span className={`text-sm font-medium ${paymentSettings.asaasSandbox ? 'text-yellow-600' : 'text-green-600'}`}>
+                {paymentSettings.asaasSandbox ? 'Sandbox' : 'Produção'}
+              </span>
+            </div>
+
+            {/* Billing Type */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Cobrança</label>
+              <select
+                value={paymentSettings.asaasBillingType}
+                onChange={(e) => setPaymentSettings({ ...paymentSettings, asaasBillingType: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="UNDEFINED">🔄 Escolha do Cliente (Boleto, Pix ou Cartão)</option>
+                <option value="BOLETO">📄 Boleto Bancário</option>
+                <option value="PIX">⚡ Pix</option>
+                <option value="CREDIT_CARD">💳 Cartão de Crédito</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">Define o meio de pagamento padrão para novas assinaturas.</p>
+            </div>
+
+            {/* Fine & Interest */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Multa por atraso (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={paymentSettings.asaasFineValue}
+                  onChange={(e) => setPaymentSettings({ ...paymentSettings, asaasFineValue: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Percentual de multa aplicado após o vencimento.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Juros mensal (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={paymentSettings.asaasInterestValue}
+                  onChange={(e) => setPaymentSettings({ ...paymentSettings, asaasInterestValue: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Percentual de juros mensal sobre o valor em atraso.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Dias antes do vencimento</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="30"
+                  value={paymentSettings.asaasDaysBeforeDueDate}
+                  onChange={(e) => setPaymentSettings({ ...paymentSettings, asaasDaysBeforeDueDate: parseInt(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Dias de antecedência para enviar cobrança.</p>
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <div className="flex justify-end pt-4 border-t">
+              <button
+                onClick={savePaymentSettings}
+                disabled={savingPayment}
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 font-medium"
+              >
+                {savingPayment ? 'Salvando...' : 'Salvar Configurações de Pagamento'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

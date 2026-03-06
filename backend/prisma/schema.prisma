@@ -42,8 +42,8 @@ model Tenant {
   dynamicLinks     DynamicLink[]
 
   // Billing
-  stripeCustomerId String?       @map("stripe_customer_id")
-  subscription     Subscription?
+  asaasCustomerId String?       @map("asaas_customer_id")
+  subscription    Subscription?
 
   @@map("tenants")
 }
@@ -119,6 +119,16 @@ model GlobalSettings {
   companyName     String?  @map("company_name")
   pageTitle       String?  @map("page_title")
   primaryColor    String?  @map("primary_color")
+
+  // Asaas Payment Gateway
+  asaasApiKey           String?  @map("asaas_api_key")
+  asaasWebhookToken     String?  @map("asaas_webhook_token")
+  asaasSandbox          Boolean  @default(true) @map("asaas_sandbox")
+  asaasBillingType      String   @default("UNDEFINED") @map("asaas_billing_type") // UNDEFINED, BOLETO, PIX, CREDIT_CARD
+  asaasFineValue        Float    @default(0) @map("asaas_fine_value") // Percentual de multa
+  asaasInterestValue    Float    @default(0) @map("asaas_interest_value") // Percentual de juros mensal
+  asaasDaysBeforeDueDate Int     @default(0) @map("asaas_days_before_due_date")
+
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -130,21 +140,19 @@ model GlobalSettings {
 // ============================================================================
 
 model Plan {
-  id              String   @id @default(uuid())
-  name            String
-  description     String?
-  stripeProductId String?  @map("stripe_product_id")
-  stripePriceId   String?  @map("stripe_price_id")
-  price           Float
-  interval        String   @default("month") // month, year
-  maxUsers        Int      @default(1) @map("max_users")
-  maxContacts     Int      @default(100) @map("max_contacts")
-  maxCampaigns    Int      @default(5) @map("max_campaigns")
-  maxConnections  Int      @default(1) @map("max_connections")
-  maxGroups       Int      @default(0) @map("max_groups")
-  active          Boolean  @default(true)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  name           String
+  description    String?
+  price          Float
+  interval       String   @default("month") // month, year
+  maxUsers       Int      @default(1) @map("max_users")
+  maxContacts    Int      @default(100) @map("max_contacts")
+  maxCampaigns   Int      @default(5) @map("max_campaigns")
+  maxConnections Int      @default(1) @map("max_connections")
+  maxGroups      Int      @default(0) @map("max_groups")
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   subscriptions Subscription[]
 
@@ -152,17 +160,17 @@ model Plan {
 }
 
 model Subscription {
-  id                   String    @id @default(uuid())
-  tenantId             String    @unique @map("tenant_id")
-  planId               String    @map("plan_id")
-  stripeSubscriptionId String?   @unique @map("stripe_subscription_id")
-  stripeCustomerId     String?   @map("stripe_customer_id")
-  status               String    @default("incomplete") // active, past_due, canceled, etc
-  currentPeriodStart   DateTime? @map("current_period_start")
-  currentPeriodEnd     DateTime? @map("current_period_end")
-  cancelAtPeriodEnd    Boolean   @default(false) @map("cancel_at_period_end")
-  createdAt            DateTime  @default(now()) @map("created_at")
-  updatedAt            DateTime  @updatedAt @map("updated_at")
+  id                  String    @id @default(uuid())
+  tenantId            String    @unique @map("tenant_id")
+  planId              String    @map("plan_id")
+  asaasSubscriptionId String?   @unique @map("asaas_subscription_id")
+  asaasCustomerId     String?   @map("asaas_customer_id")
+  status              String    @default("incomplete") // active, past_due, canceled, etc
+  currentPeriodStart  DateTime? @map("current_period_start")
+  currentPeriodEnd    DateTime? @map("current_period_end")
+  cancelAtPeriodEnd   Boolean   @default(false) @map("cancel_at_period_end")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   plan   Plan   @relation(fields: [planId], references: [id])

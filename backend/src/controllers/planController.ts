@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { stripeService } from '../services/stripeService';
+import { asaasService } from '../services/asaasService';
 
 const prisma = new PrismaClient();
 
@@ -65,7 +65,7 @@ export const getCurrentSubscription = async (req: Request, res: Response) => {
     }
 };
 
-// TENANT: Create Checkout Session
+// TENANT: Create Subscription (via Asaas)
 export const createCheckoutSession = async (req: Request, res: Response) => {
     try {
         const tenantId = (req as any).tenantId;
@@ -73,36 +73,15 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Tenant is required' });
         }
 
-        const { planId, successUrl, cancelUrl } = req.body;
-        if (!planId || !successUrl || !cancelUrl) {
-            return res.status(400).json({ error: 'planId, successUrl, and cancelUrl are required' });
+        const { planId } = req.body;
+        if (!planId) {
+            return res.status(400).json({ error: 'planId é obrigatório' });
         }
 
-        const url = await stripeService.createCheckoutSession(tenantId, planId, successUrl, cancelUrl);
-        res.json({ url });
+        const result = await asaasService.createSubscription(tenantId, planId);
+        res.json({ url: result.invoiceUrl });
     } catch (error: any) {
-        console.error('Checkout error:', error);
-        res.status(500).json({ error: error.message });
-    }
-};
-
-// TENANT: Create Portal Session
-export const createPortalSession = async (req: Request, res: Response) => {
-    try {
-        const tenantId = (req as any).tenantId;
-        if (!tenantId) {
-            return res.status(400).json({ error: 'Tenant is required' });
-        }
-
-        const { returnUrl } = req.body;
-        if (!returnUrl) {
-            return res.status(400).json({ error: 'returnUrl is required' });
-        }
-
-        const url = await stripeService.createPortalSession(tenantId, returnUrl);
-        res.json({ url });
-    } catch (error: any) {
-        console.error('Portal error:', error);
+        console.error('Asaas subscription error:', error);
         res.status(500).json({ error: error.message });
     }
 };
