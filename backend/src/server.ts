@@ -90,21 +90,17 @@ app.use((req, res, next) => {
     return next();
   }
   // Asaas webhooks use normal JSON body
-  if (req.path.includes('/api/webhooks/asaas')) {
-    return next();
-  }
   express.json({ limit: '50mb' })(req, res, next);
 });
+
 
 app.use((req, res, next) => {
   if (req.path.includes('/media/upload') || req.path.includes('/upload/image') || req.path.includes('/upload-image')) {
     return next();
   }
-  if (req.path.includes('/api/webhooks/asaas')) {
-    return next();
-  }
   express.urlencoded({ limit: '50mb', extended: true })(req, res, next);
 });
+
 
 // Serve uploads
 app.use('/api/uploads', express.static(uploadDir));

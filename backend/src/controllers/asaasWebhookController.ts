@@ -26,25 +26,29 @@ export const handleAsaasWebhook = async (req: Request, res: Response) => {
         switch (event) {
             case 'PAYMENT_CONFIRMED':
             case 'PAYMENT_RECEIVED':
+            case 'PAYMENT_RECEIVED_IN_CASH_CONFIRMED':
+                console.log(`✅ Asaas Webhook: Pagamento confirmado para ${payment.id}`);
                 await handlePaymentConfirmed(payment);
                 break;
 
             case 'PAYMENT_OVERDUE':
+                console.log(`⚠️ Asaas Webhook: Pagamento em atraso - ${payment.id}`);
                 await handlePaymentOverdue(payment);
                 break;
 
             case 'PAYMENT_DELETED':
             case 'PAYMENT_REFUNDED':
             case 'PAYMENT_CHARGEBACK_REQUESTED':
+                console.log(`❌ Asaas Webhook: Pagamento cancelado/estornado - ${payment.id}`);
                 await handlePaymentCanceled(payment);
                 break;
 
             case 'PAYMENT_CREATED':
-                console.log(`Asaas Webhook: Nova cobrança criada - ${payment.id}`);
+                console.log(`ℹ️ Asaas Webhook: Nova cobrança criada - ${payment.id}`);
                 break;
 
             default:
-                console.log(`Asaas Webhook: Evento não tratado - ${event}`);
+                console.log(`❓ Asaas Webhook: Evento não tratado - ${event}`);
         }
 
         res.json({ received: true });
@@ -61,17 +65,19 @@ async function handlePaymentConfirmed(payment: any) {
         return;
     }
 
-    const sub = await prisma.subscription.findUnique({
-        where: { asaasSubscriptionId: subscriptionId },
+    const sub = await (prisma.subscription as any).findFirst({
+        where: { asaasSubscriptionId: subscriptionId } as any,
     });
 
     if (!sub) {
+        console.log(`🔍 Asaas Webhook: Assinatura ${subscriptionId} não encontrada no banco. Tentando externalReference...`);
         // Try to find by externalReference (tenantId:planId)
         if (payment.externalReference) {
             const [tenantId, planId] = payment.externalReference.split(':');
             if (tenantId && planId) {
-                await prisma.subscription.upsert({
-                    where: { tenantId },
+                console.log(`✨ Asaas Webhook: Criando assinatura via externalReference para Tenant ${tenantId}`);
+                await (prisma.subscription as any).upsert({
+                    where: { tenantId } as any,
                     create: {
                         tenantId,
                         planId,
@@ -80,29 +86,44 @@ async function handlePaymentConfirmed(payment: any) {
                         status: 'active',
                         currentPeriodStart: new Date(),
                         currentPeriodEnd: payment.dueDate ? new Date(payment.dueDate) : undefined,
-                    },
+                    } as any,
                     update: {
                         asaasSubscriptionId: subscriptionId,
                         asaasCustomerId: payment.customer || '',
                         status: 'active',
                         currentPeriodStart: new Date(),
                         currentPeriodEnd: payment.dueDate ? new Date(payment.dueDate) : undefined,
-                    },
+                    } as any,
+                });
+
+                // Garantir que o tenant está ativo
+                await (prisma.tenant as any).update({
+                    where: { id: tenantId } as any,
+                    data: { active: true } as any
                 });
 
                 await updateTenantQuotas(tenantId, planId);
             }
+        } else {
+            console.log('❌ Asaas Webhook: Assinatura não encontrada e sem externalReference para recuperação.');
         }
         return;
     }
 
-    await prisma.subscription.update({
-        where: { id: sub.id },
+    console.log(`🚀 Asaas Webhook: Ativando assinatura ${sub.id} para Tenant ${sub.tenantId}`);
+    await (prisma.subscription as any).update({
+        where: { id: sub.id } as any,
         data: {
             status: 'active',
             currentPeriodStart: new Date(),
             currentPeriodEnd: payment.dueDate ? new Date(payment.dueDate) : undefined,
-        },
+        } as any,
+    });
+
+    // Garantir que o tenant está ativo
+    await (prisma.tenant as any).update({
+        where: { id: sub.tenantId } as any,
+        data: { active: true } as any
     });
 
     await updateTenantQuotas(sub.tenantId, sub.planId);
@@ -112,14 +133,14 @@ async function handlePaymentOverdue(payment: any) {
     const subscriptionId = payment.subscription;
     if (!subscriptionId) return;
 
-    const sub = await prisma.subscription.findUnique({
-        where: { asaasSubscriptionId: subscriptionId },
+    const sub = await (prisma.subscription as any).findFirst({
+        where: { asaasSubscriptionId: subscriptionId } as any,
     });
     if (!sub) return;
 
-    await prisma.subscription.update({
-        where: { id: sub.id },
-        data: { status: 'past_due' },
+    await (prisma.subscription as any).update({
+        where: { id: sub.id } as any,
+        data: { status: 'past_due' } as any,
     });
 }
 
@@ -127,16 +148,18 @@ async function handlePaymentCanceled(payment: any) {
     const subscriptionId = payment.subscription;
     if (!subscriptionId) return;
 
-    const sub = await prisma.subscription.findUnique({
-        where: { asaasSubscriptionId: subscriptionId },
+    const sub = await (prisma.subscription as any).findFirst({
+        where: { asaasSubscriptionId: subscriptionId } as any,
     });
+
     if (!sub) return;
 
-    await prisma.subscription.update({
-        where: { id: sub.id },
-        data: { status: 'canceled' },
+    await (prisma.subscription as any).update({
+        where: { id: sub.id } as any,
+        data: { status: 'canceled' } as any,
     });
 }
+
 
 async function updateTenantQuotas(tenantId: string, planId: string) {
     const plan = await prisma.plan.findUnique({ where: { id: planId } });
