@@ -6,6 +6,9 @@ const prisma = new PrismaClient();
 
 export const handleAsaasWebhook = async (req: Request, res: Response) => {
     try {
+        // Log completo do payload recebido para debug
+        console.log('📨 Asaas Webhook recebido:', JSON.stringify(req.body, null, 2));
+
         // Validate webhook token
         const config = await settingsService.getAsaasConfig();
         const receivedToken = req.headers['asaas-access-token'] as string;
@@ -15,13 +18,65 @@ export const handleAsaasWebhook = async (req: Request, res: Response) => {
             return res.status(401).json({ error: 'Unauthorized' });
         }
 
-        const { event, payment } = req.body;
+        const { event } = req.body;
 
-        if (!event || !payment) {
-            return res.status(400).json({ error: 'Invalid webhook payload' });
+        if (!event) {
+            console.error('Asaas Webhook: Evento não encontrado no payload');
+            return res.status(400).json({ error: 'Invalid webhook payload: event is required' });
         }
 
-        console.log(`Asaas Webhook: ${event} - Payment: ${payment.id}`);
+        console.log(`📩 Asaas Webhook: Evento recebido: ${event}`);
+
+        // =====================================================================
+        // SUBSCRIPTION EVENTS (subscription object in body)
+        // =====================================================================
+        if (event.startsWith('SUBSCRIPTION_')) {
+            const subscription = req.body.subscription;
+            if (!subscription) {
+                console.error('Asaas Webhook: Evento de assinatura sem dados de subscription');
+                return res.status(400).json({ error: 'Invalid webhook payload: subscription is required for SUBSCRIPTION events' });
+            }
+
+            switch (event) {
+                case 'SUBSCRIPTION_CREATED':
+                    console.log(`✅ Asaas Webhook: Assinatura criada - ${subscription.id}`);
+                    await handleSubscriptionCreated(subscription);
+                    break;
+
+                case 'SUBSCRIPTION_UPDATED':
+                    console.log(`🔄 Asaas Webhook: Assinatura atualizada - ${subscription.id}`);
+                    await handleSubscriptionUpdated(subscription);
+                    break;
+
+                case 'SUBSCRIPTION_DELETED':
+                case 'SUBSCRIPTION_INACTIVATED':
+                    console.log(`❌ Asaas Webhook: Assinatura cancelada/inativada - ${subscription.id}`);
+                    await handleSubscriptionCanceled(subscription);
+                    break;
+
+                case 'SUBSCRIPTION_RENEWED':
+                    console.log(`🔄 Asaas Webhook: Assinatura renovada - ${subscription.id}`);
+                    await handleSubscriptionRenewed(subscription);
+                    break;
+
+                default:
+                    console.log(`❓ Asaas Webhook: Evento de assinatura não tratado - ${event}`);
+            }
+
+            return res.json({ received: true });
+        }
+
+        // =====================================================================
+        // PAYMENT EVENTS (payment object in body)
+        // =====================================================================
+        const payment = req.body.payment;
+        if (!payment) {
+            // Não é um evento de pagamento nem de assinatura que conhecemos
+            console.log(`❓ Asaas Webhook: Evento sem dados válidos - ${event}`);
+            return res.json({ received: true });
+        }
+
+        console.log(`💰 Asaas Webhook: ${event} - Payment: ${payment.id}`);
 
         switch (event) {
             case 'PAYMENT_CONFIRMED':
@@ -48,15 +103,167 @@ export const handleAsaasWebhook = async (req: Request, res: Response) => {
                 break;
 
             default:
-                console.log(`❓ Asaas Webhook: Evento não tratado - ${event}`);
+                console.log(`❓ Asaas Webhook: Evento de pagamento não tratado - ${event}`);
         }
 
         res.json({ received: true });
     } catch (err: any) {
-        console.error(`Asaas Webhook Error: ${err.message}`);
+        console.error(`Asaas Webhook Error:`, err);
         res.status(500).json({ error: 'Webhook processing failed' });
     }
 };
+
+// =============================================================================
+// SUBSCRIPTION EVENT HANDLERS
+// =============================================================================
+
+async function handleSubscriptionCreated(subscription: any) {
+    const subscriptionId = subscription.id;
+    const customerId = subscription.customer;
+    const externalReference = subscription.externalReference;
+
+    if (!externalReference) {
+        console.log('⚠️ Asaas Webhook: SUBSCRIPTION_CREATED sem externalReference, não é possível vincular ao tenant.');
+        return;
+    }
+
+    const [tenantId, planId] = externalReference.split(':');
+    if (!tenantId || !planId) {
+        console.log(`⚠️ Asaas Webhook: externalReference inválido: ${externalReference}`);
+        return;
+    }
+
+    console.log(`🚀 Asaas Webhook: Ativando assinatura ${subscriptionId} para Tenant ${tenantId}, Plano ${planId}`);
+
+    // Calcular período com base no nextDueDate
+    const now = new Date();
+    const nextDueDate = subscription.nextDueDate ? new Date(subscription.nextDueDate) : null;
+
+    await (prisma.subscription as any).upsert({
+        where: { tenantId } as any,
+        create: {
+            tenantId,
+            planId,
+            asaasSubscriptionId: subscriptionId,
+            asaasCustomerId: customerId || '',
+            status: subscription.status === 'ACTIVE' ? 'active' : 'pending',
+            currentPeriodStart: now,
+            currentPeriodEnd: nextDueDate,
+        } as any,
+        update: {
+            planId,
+            asaasSubscriptionId: subscriptionId,
+            asaasCustomerId: customerId || '',
+            status: subscription.status === 'ACTIVE' ? 'active' : 'pending',
+            currentPeriodStart: now,
+            currentPeriodEnd: nextDueDate,
+        } as any,
+    });
+
+    // Se a assinatura está ACTIVE, ativar tenant e atualizar quotas
+    if (subscription.status === 'ACTIVE') {
+        await (prisma.tenant as any).update({
+            where: { id: tenantId } as any,
+            data: { active: true } as any,
+        });
+
+        await updateTenantQuotas(tenantId, planId);
+        console.log(`✅ Asaas Webhook: Tenant ${tenantId} ativado com sucesso!`);
+    }
+}
+
+async function handleSubscriptionUpdated(subscription: any) {
+    const sub = await (prisma.subscription as any).findFirst({
+        where: { asaasSubscriptionId: subscription.id } as any,
+    });
+
+    if (!sub) {
+        console.log(`⚠️ Asaas Webhook: Assinatura ${subscription.id} não encontrada para atualização, tentando via externalReference...`);
+        // Tentar criar via externalReference
+        await handleSubscriptionCreated(subscription);
+        return;
+    }
+
+    const statusMap: Record<string, string> = {
+        'ACTIVE': 'active',
+        'INACTIVE': 'canceled',
+        'EXPIRED': 'canceled',
+    };
+
+    const newStatus = statusMap[subscription.status] || sub.status;
+    const nextDueDate = subscription.nextDueDate ? new Date(subscription.nextDueDate) : sub.currentPeriodEnd;
+
+    await (prisma.subscription as any).update({
+        where: { id: sub.id } as any,
+        data: {
+            status: newStatus,
+            currentPeriodEnd: nextDueDate,
+        } as any,
+    });
+
+    if (newStatus === 'active') {
+        await (prisma.tenant as any).update({
+            where: { id: sub.tenantId } as any,
+            data: { active: true } as any,
+        });
+        await updateTenantQuotas(sub.tenantId, sub.planId);
+    }
+
+    console.log(`🔄 Asaas Webhook: Assinatura ${sub.id} atualizada -> status: ${newStatus}`);
+}
+
+async function handleSubscriptionCanceled(subscription: any) {
+    const sub = await (prisma.subscription as any).findFirst({
+        where: { asaasSubscriptionId: subscription.id } as any,
+    });
+
+    if (!sub) {
+        console.log(`⚠️ Asaas Webhook: Assinatura ${subscription.id} não encontrada para cancelamento.`);
+        return;
+    }
+
+    await (prisma.subscription as any).update({
+        where: { id: sub.id } as any,
+        data: { status: 'canceled' } as any,
+    });
+
+    console.log(`❌ Asaas Webhook: Assinatura ${sub.id} cancelada para Tenant ${sub.tenantId}`);
+}
+
+async function handleSubscriptionRenewed(subscription: any) {
+    const sub = await (prisma.subscription as any).findFirst({
+        where: { asaasSubscriptionId: subscription.id } as any,
+    });
+
+    if (!sub) {
+        console.log(`⚠️ Asaas Webhook: Assinatura ${subscription.id} não encontrada para renovação.`);
+        await handleSubscriptionCreated(subscription);
+        return;
+    }
+
+    const nextDueDate = subscription.nextDueDate ? new Date(subscription.nextDueDate) : null;
+
+    await (prisma.subscription as any).update({
+        where: { id: sub.id } as any,
+        data: {
+            status: 'active',
+            currentPeriodStart: new Date(),
+            currentPeriodEnd: nextDueDate,
+        } as any,
+    });
+
+    await (prisma.tenant as any).update({
+        where: { id: sub.tenantId } as any,
+        data: { active: true } as any,
+    });
+
+    await updateTenantQuotas(sub.tenantId, sub.planId);
+    console.log(`🔄 Asaas Webhook: Assinatura ${sub.id} renovada para Tenant ${sub.tenantId}`);
+}
+
+// =============================================================================
+// PAYMENT EVENT HANDLERS
+// =============================================================================
 
 async function handlePaymentConfirmed(payment: any) {
     const subscriptionId = payment.subscription;
@@ -71,7 +278,6 @@ async function handlePaymentConfirmed(payment: any) {
 
     if (!sub) {
         console.log(`🔍 Asaas Webhook: Assinatura ${subscriptionId} não encontrada no banco. Tentando externalReference...`);
-        // Try to find by externalReference (tenantId:planId)
         if (payment.externalReference) {
             const [tenantId, planId] = payment.externalReference.split(':');
             if (tenantId && planId) {
@@ -96,10 +302,9 @@ async function handlePaymentConfirmed(payment: any) {
                     } as any,
                 });
 
-                // Garantir que o tenant está ativo
                 await (prisma.tenant as any).update({
                     where: { id: tenantId } as any,
-                    data: { active: true } as any
+                    data: { active: true } as any,
                 });
 
                 await updateTenantQuotas(tenantId, planId);
@@ -120,10 +325,9 @@ async function handlePaymentConfirmed(payment: any) {
         } as any,
     });
 
-    // Garantir que o tenant está ativo
     await (prisma.tenant as any).update({
         where: { id: sub.tenantId } as any,
-        data: { active: true } as any
+        data: { active: true } as any,
     });
 
     await updateTenantQuotas(sub.tenantId, sub.planId);
@@ -151,7 +355,6 @@ async function handlePaymentCanceled(payment: any) {
     const sub = await (prisma.subscription as any).findFirst({
         where: { asaasSubscriptionId: subscriptionId } as any,
     });
-
     if (!sub) return;
 
     await (prisma.subscription as any).update({
@@ -160,10 +363,16 @@ async function handlePaymentCanceled(payment: any) {
     });
 }
 
+// =============================================================================
+// HELPERS
+// =============================================================================
 
 async function updateTenantQuotas(tenantId: string, planId: string) {
     const plan = await prisma.plan.findUnique({ where: { id: planId } });
-    if (!plan) return;
+    if (!plan) {
+        console.log(`⚠️ Asaas Webhook: Plano ${planId} não encontrado para atualizar quotas.`);
+        return;
+    }
 
     await prisma.tenantQuota.upsert({
         where: { tenantId },
@@ -183,4 +392,6 @@ async function updateTenantQuotas(tenantId: string, planId: string) {
             maxGroups: plan.maxGroups,
         },
     });
+
+    console.log(`📊 Asaas Webhook: Quotas atualizadas para Tenant ${tenantId}`);
 }

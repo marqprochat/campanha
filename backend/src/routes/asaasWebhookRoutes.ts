@@ -5,5 +5,7 @@ const router = Router();
 
 // Endpoint is prefixed with /api/webhooks/asaas in server.ts
 router.post('/', handleAsaasWebhook);
+router.post('', handleAsaasWebhook);
+
 
 export default router;
