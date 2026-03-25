@@ -69,6 +69,38 @@ export function WhatsAppConnectionsPage() {
   const [currentQRSession, setCurrentQRSession] = useState<WhatsAppSession | null>(null);
   const [createSessionModalOpen, setCreateSessionModalOpen] = useState(false);
   const [providerDropdownOpen, setProviderDropdownOpen] = useState(false);
+  
+  // Lista de provedores disponíveis com base nas configurações
+  const availableProviders = [
+    {
+      id: 'WAHA' as const,
+      name: 'Waha',
+      icon: '/iconewaha.png',
+      isConfigured: !!(settings?.wahaHost && settings?.wahaApiKey)
+    },
+    {
+      id: 'EVOLUTION' as const,
+      name: 'Evolution API',
+      icon: '/iconeevolutionapi.png',
+      isConfigured: !!(settings?.evolutionHost && settings?.evolutionApiKey)
+    },
+    {
+      id: 'QUEPASA' as const,
+      name: 'Quepasa',
+      icon: '/iconequepasa.png',
+      isConfigured: !!(settings?.quepasaUrl && settings?.quepasaLogin && settings?.quepasaPassword)
+    }
+  ].filter(p => p.isConfigured);
+
+  // Se o provedor selecionado não estiver disponível, mudar para o primeiro disponível
+  useEffect(() => {
+    if (availableProviders.length > 0) {
+      const isCurrentAvailable = availableProviders.some(p => p.id === newSessionProvider);
+      if (!isCurrentAvailable) {
+        setNewSessionProvider(availableProviders[0].id);
+      }
+    }
+  }, [availableProviders, newSessionProvider]);
 
   // Preload das imagens dos provedores para carregamento instantâneo
   useEffect(() => {
@@ -626,109 +658,96 @@ export function WhatsAppConnectionsPage() {
             </div>
 
             <div className="space-y-6">
-              <div>
-                <label htmlFor="session-provider" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Provedor WhatsApp *
-                </label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => !isCreating && setProviderDropdownOpen(!providerDropdownOpen)}
-                    className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm bg-white text-left flex items-center justify-between"
-                    disabled={isCreating}
-                  >
-                    <span className="flex items-center gap-3">
-                      <img
-                        src={
-                          newSessionProvider === 'EVOLUTION' ? '/iconeevolutionapi.png' :
-                          newSessionProvider === 'QUEPASA' ? '/iconequepasa.png' :
-                          '/iconewaha.png'
-                        }
-                        alt={newSessionProvider}
-                        className="w-5 h-5 object-contain"
-                      />
-                      {newSessionProvider === 'EVOLUTION' ? 'Evolution API' :
-                       newSessionProvider === 'QUEPASA' ? 'Quepasa' :
-                       'Waha'}
-                    </span>
-                    <svg className={`w-4 h-4 text-gray-400 transition-transform ${providerDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              {availableProviders.length === 0 ? (
+                <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl text-orange-800 text-sm mb-6">
+                  <div className="flex gap-2">
+                    <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                  </button>
-
-                  {providerDropdownOpen && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-10"
-                        onClick={() => setProviderDropdownOpen(false)}
-                      />
-                      <div className="absolute z-20 w-full mt-2 bg-white border border-gray-300 rounded-xl shadow-lg overflow-hidden">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNewSessionProvider('WAHA');
-                            setProviderDropdownOpen(false);
-                          }}
-                          className={`w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-blue-50 transition-colors ${
-                            newSessionProvider === 'WAHA' ? 'bg-blue-50' : ''
-                          }`}
-                        >
-                          <img src="/iconewaha.png" alt="Waha" className="w-5 h-5 object-contain" />
-                          <span className="text-sm">Waha</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNewSessionProvider('EVOLUTION');
-                            setProviderDropdownOpen(false);
-                          }}
-                          className={`w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-blue-50 transition-colors ${
-                            newSessionProvider === 'EVOLUTION' ? 'bg-blue-50' : ''
-                          }`}
-                        >
-                          <img src="/iconeevolutionapi.png" alt="Evolution API" className="w-5 h-5 object-contain" />
-                          <span className="text-sm">Evolution API</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNewSessionProvider('QUEPASA');
-                            setProviderDropdownOpen(false);
-                          }}
-                          className={`w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-blue-50 transition-colors ${
-                            newSessionProvider === 'QUEPASA' ? 'bg-blue-50' : ''
-                          }`}
-                        >
-                          <img src="/iconequepasa.png" alt="Quepasa" className="w-5 h-5 object-contain" />
-                          <span className="text-sm">Quepasa</span>
-                        </button>
-                      </div>
-                    </>
-                  )}
+                    <span>
+                      Nenhum provedor WhatsApp configurado no sistema. 
+                      Entre em contato com o administrador para configurar as credenciais.
+                    </span>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Escolha o provedor para conectar ao WhatsApp
-                </p>
-              </div>
+              ) : (
+                <>
+                  <div>
+                    <label htmlFor="session-provider" className="block text-sm font-semibold text-gray-700 mb-2">
+                      Provedor WhatsApp *
+                    </label>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => !isCreating && setProviderDropdownOpen(!providerDropdownOpen)}
+                        className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm bg-white text-left flex items-center justify-between"
+                        disabled={isCreating}
+                      >
+                        <span className="flex items-center gap-3">
+                          <img
+                            src={availableProviders.find(p => p.id === newSessionProvider)?.icon || '/iconewaha.png'}
+                            alt={newSessionProvider}
+                            className="w-5 h-5 object-contain"
+                          />
+                          {availableProviders.find(p => p.id === newSessionProvider)?.name || 'Waha'}
+                        </span>
+                        <svg className={`w-4 h-4 text-gray-400 transition-transform ${providerDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
 
-              <div>
-                <label htmlFor="session-name" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nome da Sessão *
-                </label>
-                <input
-                  id="session-name"
-                  type="text"
-                  value={newSessionName}
-                  onChange={(e) => setNewSessionName(e.target.value)}
-                  placeholder="Ex: vendas, suporte, atendimento"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                  disabled={isCreating}
-                  autoFocus
-                />
-                <p className="text-xs text-gray-500 mt-2">
-                  Use um nome descritivo para facilitar a identificação
-                </p>
-              </div>
+                      {providerDropdownOpen && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-10"
+                            onClick={() => setProviderDropdownOpen(false)}
+                          />
+                          <div className="absolute z-20 w-full mt-2 bg-white border border-gray-300 rounded-xl shadow-lg overflow-hidden max-h-60 overflow-y-auto">
+                            {availableProviders.map((provider) => (
+                              <button
+                                key={provider.id}
+                                type="button"
+                                onClick={() => {
+                                  setNewSessionProvider(provider.id);
+                                  setProviderDropdownOpen(false);
+                                }}
+                                className={`w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-green-50 transition-colors ${
+                                  newSessionProvider === provider.id ? 'bg-green-50 text-green-700 font-medium' : 'text-gray-700'
+                                }`}
+                              >
+                                <img src={provider.icon} alt={provider.name} className="w-5 h-5 object-contain" />
+                                <span className="text-sm">{provider.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Escolha o provedor para conectar ao WhatsApp
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="session-name" className="block text-sm font-semibold text-gray-700 mb-2">
+                      Nome da Sessão *
+                    </label>
+                    <input
+                      id="session-name"
+                      type="text"
+                      value={newSessionName}
+                      onChange={(e) => setNewSessionName(e.target.value)}
+                      placeholder="Ex: vendas, suporte, atendimento"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      disabled={isCreating}
+                      autoFocus
+                    />
+                    <p className="text-xs text-gray-500 mt-2">
+                      Use um nome descritivo para facilitar a identificação
+                    </p>
+                  </div>
+                </>
+              )}
 
               <div className="flex gap-4 pt-6">
                 <button
@@ -749,7 +768,7 @@ export function WhatsAppConnectionsPage() {
                     await createSession();
                     setCreateSessionModalOpen(false);
                   }}
-                  disabled={isCreating || !newSessionName.trim()}
+                  disabled={isCreating || !newSessionName.trim() || availableProviders.length === 0}
                   className="flex-1 bg-green-600 text-white py-3 px-6 rounded-xl hover:bg-green-700 font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isCreating ? (

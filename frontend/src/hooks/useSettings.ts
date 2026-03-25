@@ -4,11 +4,24 @@ interface Settings {
   id: string;
   wahaHost: string;
   wahaApiKey: string;
+  evolutionHost?: string;
+  evolutionApiKey?: string;
+  quepasaUrl?: string;
+  quepasaLogin?: string;
+  quepasaPassword?: string;
   logoUrl?: string;
   companyName?: string;
   faviconUrl?: string;
   pageTitle?: string;
   iconUrl?: string;
+  primaryColor?: string;
+  asaasApiKey?: string;
+  asaasWebhookToken?: string;
+  asaasSandbox?: boolean;
+  asaasBillingType?: string;
+  asaasFineValue?: number;
+  asaasInterestValue?: number;
+  asaasDaysBeforeDueDate?: number;
   criadoEm: string;
   atualizadoEm: string;
 }
