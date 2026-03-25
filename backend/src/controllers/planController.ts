@@ -85,3 +85,77 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+// SUPERADMIN: Activate Subscription Manually
+export const activateSubscriptionManually = async (req: Request, res: Response) => {
+    try {
+        const user = (req as any).user;
+        if (user.role !== 'SUPERADMIN') return res.status(403).json({ error: 'Forbidden' });
+
+        const { tenantId } = req.params;
+
+        // Buscar o tenant
+        const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+        if (!tenant) return res.status(404).json({ error: 'Tenant não encontrado' });
+
+        // Buscar a assinatura
+        const sub = await (prisma.subscription as any).findFirst({
+            where: { tenantId } as any,
+            include: { plan: true } as any,
+        }) as any;
+
+        if (!sub) {
+            return res.status(404).json({ error: 'Assinatura não encontrada para este tenant' });
+        }
+
+        // Ativar a assinatura
+        await (prisma.subscription as any).update({
+            where: { id: sub.id } as any,
+            data: {
+                status: 'active',
+                currentPeriodStart: new Date(),
+            } as any,
+        });
+
+        // Ativar o tenant
+        await prisma.tenant.update({
+            where: { id: tenantId },
+            data: { active: true },
+        });
+
+        // Atualizar as quotas do tenant com base no plano
+        if (sub.plan) {
+            await prisma.tenantQuota.upsert({
+                where: { tenantId },
+                create: {
+                    tenantId,
+                    maxUsers: sub.plan.maxUsers,
+                    maxContacts: sub.plan.maxContacts,
+                    maxCampaigns: sub.plan.maxCampaigns,
+                    maxConnections: sub.plan.maxConnections,
+                    maxGroups: sub.plan.maxGroups,
+                },
+                update: {
+                    maxUsers: sub.plan.maxUsers,
+                    maxContacts: sub.plan.maxContacts,
+                    maxCampaigns: sub.plan.maxCampaigns,
+                    maxConnections: sub.plan.maxConnections,
+                    maxGroups: sub.plan.maxGroups,
+                },
+            });
+        }
+
+        console.log(`✅ Assinatura do Tenant ${tenantId} ativada manualmente pelo SUPERADMIN ${user.email}`);
+
+        res.json({
+            success: true,
+            message: `Tenant "${tenant.name}" e assinatura ativados com sucesso!`,
+            tenantId,
+            subscriptionId: sub.id,
+            planName: sub.plan?.name,
+        });
+    } catch (error: any) {
+        console.error('activateSubscriptionManually error:', error);
+        res.status(500).json({ error: error.message });
+    }
+};

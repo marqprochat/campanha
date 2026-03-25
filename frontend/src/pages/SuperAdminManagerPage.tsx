@@ -719,6 +719,26 @@ export function SuperAdminManagerPage() {
     }
   };
 
+  const handleActivateSubscription = async (tenant: Tenant) => {
+    if (!confirm(`Ativar assinatura e conta da empresa "${tenant.name}"? Isso marcará o tenant como ATIVO.`)) return;
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/plans/subscription/activate/${tenant.id}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(data.message || 'Assinatura ativada com sucesso!');
+        loadData();
+      } else {
+        toast.error(data.error || 'Erro ao ativar assinatura');
+      }
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
   const handleCreateTenant = () => {
     setEditingTenant(null);
     setFormData({
@@ -1258,6 +1278,15 @@ export function SuperAdminManagerPage() {
                     >
                       Editar
                     </button>
+                    {!tenant.active && (
+                      <button
+                        onClick={() => handleActivateSubscription(tenant)}
+                        title="Ativar assinatura manualmente (pagamento já confirmado)"
+                        className="px-3 py-2 text-sm rounded-lg bg-yellow-100 text-yellow-800 hover:bg-yellow-200 font-medium"
+                      >
+                        ⚡ Ativar Assinatura
+                      </button>
+                    )}
                     <button
                       onClick={() => handleToggleTenantStatus(tenant)}
                       className={`px-3 py-2 text-sm rounded-lg ${tenant.active
