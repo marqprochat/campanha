@@ -43,6 +43,31 @@ export const listPlans = async (req: Request, res: Response) => {
     }
 };
 
+// PUBLIC: List Active Plans (no auth required)
+export const listPublicPlans = async (req: Request, res: Response) => {
+    try {
+        const plans = await prisma.plan.findMany({
+            where: { active: true },
+            select: {
+                id: true,
+                name: true,
+                description: true,
+                price: true,
+                interval: true,
+                maxUsers: true,
+                maxContacts: true,
+                maxCampaigns: true,
+                maxConnections: true,
+                maxGroups: true,
+            },
+            orderBy: { price: 'asc' },
+        });
+        res.json(plans);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 // TENANT: Get Current Subscription
 export const getCurrentSubscription = async (req: Request, res: Response) => {
     try {

@@ -303,3 +303,112 @@ export const verifyToken = async (req: AuthenticatedRequest, res: Response): Pro
     });
   }
 };
+
+// === SELF-REGISTRATION (Public) ===
+
+export const selfRegisterValidators = [
+  body('nome')
+    .isLength({ min: 2 })
+    .withMessage('Nome deve ter pelo menos 2 caracteres')
+    .trim(),
+  body('email')
+    .isEmail()
+    .withMessage('E-mail inválido')
+    .normalizeEmail(),
+  body('senha')
+    .isLength({ min: 6 })
+    .withMessage('Senha deve ter pelo menos 6 caracteres'),
+];
+
+export const selfRegister = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({
+        success: false,
+        message: 'Dados inválidos',
+        errors: errors.array()
+      });
+      return;
+    }
+
+    const { nome, email, senha } = req.body;
+
+    // Check if email already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      res.status(400).json({
+        success: false,
+        message: 'E-mail já está em uso'
+      });
+      return;
+    }
+
+    // Generate a slug from the name
+    const baseSlug = nome
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    
+    // Make slug unique by appending random chars
+    const uniqueSuffix = Math.random().toString(36).substring(2, 8);
+    const slug = `${baseSlug}-${uniqueSuffix}`;
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(senha, 12);
+
+    // Create Tenant + User in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the tenant (inactive until plan subscription)
+      const tenant = await tx.tenant.create({
+        data: {
+          slug,
+          name: nome,
+          active: false, // Will be activated after subscribing to a plan
+        }
+      });
+
+      // Create the admin user for this tenant
+      const user = await tx.user.create({
+        data: {
+          nome,
+          email,
+          senha: hashedPassword,
+          role: 'ADMIN',
+          tenantId: tenant.id,
+        }
+      });
+
+      return { tenant, user };
+    });
+
+    // Generate JWT token for auto-login
+    const token = generateToken(result.user.id, result.user.email, result.user.role, result.tenant.id);
+
+    res.status(201).json({
+      success: true,
+      message: 'Conta criada com sucesso! Assine um plano para liberar as funcionalidades.',
+      data: {
+        token,
+        user: sanitizeUser(result.user),
+        tenant: {
+          id: result.tenant.id,
+          slug: result.tenant.slug,
+          name: result.tenant.name,
+          active: result.tenant.active,
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Erro no auto-cadastro:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+};

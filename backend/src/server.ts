@@ -32,6 +32,7 @@ import { groupRoutes } from './routes/groupRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 import asaasWebhookRoutes from './routes/asaasWebhookRoutes';
 import planRoutes from './routes/planRoutes';
+import { listPublicPlans } from './controllers/planController';
 import groupCampaignRoutes from './routes/groupCampaign';
 
 // Services
@@ -111,6 +112,9 @@ app.use('/api/settings', settingsRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
+
+// Public Plans (no auth required)
+app.get('/api/plans/public', listPublicPlans);
 
 // Asaas Webhook Endpoint
 app.use('/api/webhooks/asaas', asaasWebhookRoutes);

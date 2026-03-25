@@ -42,6 +42,13 @@ export const planService = {
         return api.get<Plan[]>('/plans');
     },
 
+    // PUBLIC endpoint (no auth required)
+    async listPublicPlans(): Promise<Plan[]> {
+        const response = await fetch('/api/plans/public');
+        if (!response.ok) throw new Error('Failed to fetch plans');
+        return response.json();
+    },
+
     // TENANT endpoints
     async getCurrentSubscription(): Promise<Subscription | null> {
         return api.get<Subscription | null>('/plans/subscription/current');

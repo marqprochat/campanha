@@ -141,7 +141,7 @@ function AppContent() {
     );
   }
 
-  const isPublicPage = location.pathname.startsWith('/share/') || location.pathname === '/login' || location.pathname === '/';
+  const isPublicPage = location.pathname.startsWith('/share/') || location.pathname === '/login' || location.pathname === '/' || location.pathname === '/landing';
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -150,9 +150,7 @@ function AppContent() {
       <main className={isPublicPage ? '' : "main-content flex-1 flex flex-col"}>
         <Routes>
           {/* Public Routes */}
-          <Route path="/"
-            element={!isAuthenticated ? <LoginPage /> : <Navigate to="/contatos" replace />}
-          />
+          <Route path="/" element={<LandingPage />} />
           <Route
             path="/login"
             element={!isAuthenticated ? <LoginPage /> : <Navigate to="/contatos" replace />}
