@@ -13,6 +13,7 @@ const loginSchema = z.object({
 
 const registerSchema = z.object({
   nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  empresa: z.string().min(2, 'Nome da empresa deve ter pelo menos 2 caracteres'),
   email: z.string().email('E-mail inválido'),
   senha: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
   confirmarSenha: z.string().min(6, 'Confirme sua senha'),
@@ -79,6 +80,7 @@ export function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nome: data.nome,
+          empresa: data.empresa,
           email: data.email,
           senha: data.senha,
         }),
@@ -301,6 +303,25 @@ export function LoginPage() {
                           />
                           {registerForm.formState.errors.nome && (
                             <p className="mt-1 text-sm text-red-600">{registerForm.formState.errors.nome.message}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label htmlFor="reg-empresa" className="block text-sm font-medium text-gray-700 mb-1.5">
+                            Nome da Empresa
+                          </label>
+                          <input
+                            {...registerForm.register('empresa')}
+                            type="text"
+                            id="reg-empresa"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:border-transparent transition-colors"
+                            onFocus={inputFocus}
+                            onBlur={inputBlur}
+                            placeholder="Nome da sua empresa"
+                            disabled={isSubmitting}
+                          />
+                          {registerForm.formState.errors.empresa && (
+                            <p className="mt-1 text-sm text-red-600">{registerForm.formState.errors.empresa.message}</p>
                           )}
                         </div>
 

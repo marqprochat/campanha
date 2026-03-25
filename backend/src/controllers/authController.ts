@@ -292,7 +292,10 @@ export const verifyToken = async (req: AuthenticatedRequest, res: Response): Pro
       success: true,
       message: 'Token válido',
       data: {
-        user: req.user
+        user: {
+          ...req.user,
+          tenant: req.tenant
+        }
       }
     });
   } catch (error) {
@@ -310,6 +313,10 @@ export const selfRegisterValidators = [
   body('nome')
     .isLength({ min: 2 })
     .withMessage('Nome deve ter pelo menos 2 caracteres')
+    .trim(),
+  body('empresa')
+    .isLength({ min: 2 })
+    .withMessage('Nome da empresa deve ter pelo menos 2 caracteres')
     .trim(),
   body('email')
     .isEmail()
@@ -332,7 +339,7 @@ export const selfRegister = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const { nome, email, senha } = req.body;
+    const { nome, empresa, email, senha } = req.body;
 
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
@@ -347,8 +354,8 @@ export const selfRegister = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    // Generate a slug from the name
-    const baseSlug = nome
+    // Generate a slug from the company name (empresa)
+    const baseSlug = empresa
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -368,7 +375,7 @@ export const selfRegister = async (req: Request, res: Response): Promise<void> =
       const tenant = await tx.tenant.create({
         data: {
           slug,
-          name: nome,
+          name: empresa, // Use empresa for tenant name
           active: false, // Will be activated after subscribing to a plan
         }
       });
@@ -395,12 +402,14 @@ export const selfRegister = async (req: Request, res: Response): Promise<void> =
       message: 'Conta criada com sucesso! Assine um plano para liberar as funcionalidades.',
       data: {
         token,
-        user: sanitizeUser(result.user),
-        tenant: {
-          id: result.tenant.id,
-          slug: result.tenant.slug,
-          name: result.tenant.name,
-          active: result.tenant.active,
+        user: {
+          ...sanitizeUser(result.user),
+          tenant: {
+            id: result.tenant.id,
+            slug: result.tenant.slug,
+            name: result.tenant.name,
+            active: result.tenant.active,
+          }
         }
       }
     });

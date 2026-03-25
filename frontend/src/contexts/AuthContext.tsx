@@ -7,6 +7,13 @@ interface User {
   email: string;
   role: string;
   ativo: boolean;
+  tenantId?: string;
+  tenant?: {
+    id: string;
+    slug: string;
+    name: string;
+    active: boolean;
+  };
   ultimoLogin?: string | null;
   criadoEm: string;
 }

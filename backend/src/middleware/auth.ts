@@ -126,8 +126,8 @@ export const authMiddleware = async (
     if (effectiveTenantId) {
       const tenant = await prisma.tenant.findUnique({
         where: {
-          id: effectiveTenantId,
-          active: true
+          id: effectiveTenantId
+          // Remove active: true to allow users from inactive tenants to access the subscription page
         },
         select: {
           id: true,
@@ -140,7 +140,7 @@ export const authMiddleware = async (
       if (!tenant) {
         res.status(401).json({
           success: false,
-          message: 'Tenant não encontrado ou inativo'
+          message: 'Empresa não encontrada'
         });
         return;
       }

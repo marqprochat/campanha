@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 interface ProtectedRouteProps {
@@ -10,6 +10,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, adminOnly = false, superAdminOnly = false }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -26,7 +27,16 @@ export function ProtectedRoute({ children, adminOnly = false, superAdminOnly = f
     return <Navigate to="/login" replace />;
   }
 
-  if (superAdminOnly && user?.role !== 'SUPERADMIN') {
+  // Redirection for inactive tenants
+  const isSuperAdmin = user?.role === 'SUPERADMIN';
+  const isTenantActive = user?.tenant?.active !== false; // Active by default if not provided, though it should be check if present
+  const isSubscriptionPage = location.pathname === '/configuracoes/assinatura';
+
+  if (!isSuperAdmin && !isTenantActive && !isSubscriptionPage) {
+    return <Navigate to="/configuracoes/assinatura" replace />;
+  }
+
+  if (superAdminOnly && !isSuperAdmin) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
