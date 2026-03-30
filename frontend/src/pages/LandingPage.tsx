@@ -147,7 +147,7 @@ export const LandingPage = () => {
                                     className="px-8 py-4 rounded-2xl font-bold text-lg transition-all transform hover:-translate-y-1 hover:shadow-2xl"
                                     style={{ background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)', boxShadow: '0 8px 32px rgba(37,211,102,0.3)' }}
                                 >
-                                    🚀 Começar Grátis
+                                    🚀 Começar Agora
                                 </button>
                                 <button
                                     onClick={() => scrollToSection('como-funciona')}
@@ -160,7 +160,7 @@ export const LandingPage = () => {
                             <div className="flex items-center gap-6 text-sm text-gray-500">
                                 <div className="flex items-center gap-2">
                                     <svg className="w-5 h-5 text-[#25D366]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                                    Sem cartão de crédito
+                                    Ative sua audiência
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <svg className="w-5 h-5 text-[#25D366]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
@@ -322,7 +322,7 @@ export const LandingPage = () => {
                                 step: '01',
                                 icon: '📝',
                                 title: 'Crie sua Conta',
-                                desc: 'Registre-se gratuitamente e conecte seu WhatsApp em poucos minutos.',
+                                desc: 'Crie sua conta e conecte seu WhatsApp em poucos minutos.',
                             },
                             {
                                 step: '02',
@@ -374,7 +374,7 @@ export const LandingPage = () => {
                             Escolha o plano ideal para <span className="text-[#25D366]">você</span>
                         </h2>
                         <p className="mt-4 text-xl text-gray-400 max-w-2xl mx-auto">
-                            Comece grátis e escale conforme sua audiência cresce.
+                            Escolha o plano ideal para escalar sua audiência.
                         </p>
                     </div>
 
@@ -495,10 +495,10 @@ export const LandingPage = () => {
                             className="px-10 py-5 rounded-2xl font-bold text-lg transition-all transform hover:-translate-y-1 hover:shadow-2xl"
                             style={{ background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)', boxShadow: '0 8px 40px rgba(37,211,102,0.4)' }}
                         >
-                            🚀 Criar Minha Conta Grátis
+                            🚀 Criar Minha Conta Agora
                         </button>
                         <p className="text-gray-500 text-sm mt-4">
-                            Sem cartão de crédito • Setup em 2 minutos • Cancele quando quiser
+                            Setup em 2 minutos • Suporte prioritário • Cancele quando quiser
                         </p>
                     </div>
                 </div>

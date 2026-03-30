@@ -401,7 +401,7 @@ export function LoginPage() {
                               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
                               Criando conta...
                             </div>
-                          ) : 'Criar Conta Grátis'}
+                          ) : 'Criar Conta'}
                         </button>
 
                         <p className="text-xs text-center text-gray-500 mt-3">
