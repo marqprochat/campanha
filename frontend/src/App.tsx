@@ -5,9 +5,9 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TenantProvider } from './contexts/TenantContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Navigation } from './components/Navigation';
-import { ContactsPage } from './pages/ContactsPage';
+// import { ContactsPage } from './pages/ContactsPage'; // DESATIVADO TEMPORARIAMENTE
 import { WhatsAppConnectionsPage } from './pages/WhatsAppConnectionsPage';
-import { CampaignsPage } from './pages/CampaignsPage';
+// import { CampaignsPage } from './pages/CampaignsPage'; // DESATIVADO TEMPORARIAMENTE
 import { SettingsPage } from './pages/SettingsPage';
 import { UsersPage } from './pages/UsersPage';
 import { LoginPage } from './pages/LoginPage';
@@ -15,9 +15,9 @@ import { LandingPage } from './pages/LandingPage';
 import { SuperAdminPage } from './pages/SuperAdminPage';
 import { SuperAdminDashboard } from './pages/SuperAdminDashboard';
 import { SuperAdminManagerPage } from './pages/SuperAdminManagerPage';
-import { LeadPageList } from './pages/admin/LeadPages/LeadPageList';
-import { LeadPageEditor } from './pages/admin/LeadPages/LeadPageEditor';
-import { LeadCapturePage } from './pages/public/LeadCapturePage';
+// import { LeadPageList } from './pages/admin/LeadPages/LeadPageList'; // DESATIVADO TEMPORARIAMENTE
+// import { LeadPageEditor } from './pages/admin/LeadPages/LeadPageEditor'; // DESATIVADO TEMPORARIAMENTE
+// import { LeadCapturePage } from './pages/public/LeadCapturePage'; // DESATIVADO TEMPORARIAMENTE
 import { GroupManagementPage } from './pages/GroupManagementPage';
 import { useGlobalSettings } from './hooks/useGlobalSettings';
 import { SubscriptionPage } from './pages/SubscriptionPage';
@@ -153,10 +153,11 @@ function AppContent() {
           <Route path="/" element={<LandingPage />} />
           <Route
             path="/login"
-            element={!isAuthenticated ? <LoginPage /> : <Navigate to="/contatos" replace />}
+            element={!isAuthenticated ? <LoginPage /> : <Navigate to="/whatsapp" replace />}
           />
 
           {/* Protected Routes */}
+          {/* DESATIVADO TEMPORARIAMENTE - Contatos
           <Route
             path="/contatos"
             element={
@@ -165,6 +166,7 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
+          */}
           <Route
             path="/whatsapp"
             element={
@@ -173,6 +175,7 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
+          {/* DESATIVADO TEMPORARIAMENTE - Campanhas
           <Route
             path="/campanhas"
             element={
@@ -181,6 +184,7 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
+          */}
           <Route
             path="/configuracoes"
             element={
@@ -230,6 +234,7 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
+          {/* DESATIVADO TEMPORARIAMENTE - Páginas
           <Route
             path="/paginas"
             element={
@@ -254,6 +259,8 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
+          <Route path="/share/:slug" element={<LeadCapturePage />} />
+          */}
           <Route
             path="/grupos"
             element={
@@ -262,7 +269,6 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
-          <Route path="/share/:slug" element={<LeadCapturePage />} />
 
           {/* Fallback for unknown routes */}
           <Route path="*" element={<Navigate to="/" replace />} />

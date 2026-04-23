@@ -6,12 +6,12 @@ import * as fs from 'fs';
 import path from 'path';
 
 // Routes
-import { contactRoutes } from './routes/contactRoutes';
-import { categoryRoutes } from './routes/categoryRoutes';
+// import { contactRoutes } from './routes/contactRoutes'; // DESATIVADO TEMPORARIAMENTE
+// import { categoryRoutes } from './routes/categoryRoutes'; // DESATIVADO TEMPORARIAMENTE
 import { mockRoutes } from './routes/mockRoutes';
-import { csvImportRoutes } from './routes/csvImportRoutes';
+// import { csvImportRoutes } from './routes/csvImportRoutes'; // DESATIVADO TEMPORARIAMENTE
 import wahaRoutes from './routes/waha';
-import campaignRoutes from './routes/campaigns';
+// import campaignRoutes from './routes/campaigns'; // DESATIVADO TEMPORARIAMENTE
 import settingsRoutes from './routes/settingsRoutes';
 import authRoutes from './routes/auth';
 import usersRoutes from './routes/users';
@@ -27,7 +27,7 @@ import messageTemplatesRoutes from './routes/messageTemplates';
 import reportsRoutes from './routes/reports';
 import automationRoutes from './routes/automation';
 import chatwootRoutes from './routes/chatwootRoutes';
-import leadPageRoutes from './routes/leadPageRoutes';
+// import leadPageRoutes from './routes/leadPageRoutes'; // DESATIVADO TEMPORARIAMENTE
 import { groupRoutes } from './routes/groupRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 import asaasWebhookRoutes from './routes/asaasWebhookRoutes';
@@ -120,11 +120,12 @@ app.get('/api/plans/public', listPublicPlans);
 app.use('/api/webhooks/asaas', asaasWebhookRoutes);
 
 // Protected Routes
-app.use('/api/contatos', authMiddleware, contactRoutes);
-app.use('/api/categorias', authMiddleware, categoryRoutes);
-app.use('/api/csv', authMiddleware, csvImportRoutes);
+// DESATIVADO TEMPORARIAMENTE - Contatos, Categorias, CSV
+// app.use('/api/contatos', authMiddleware, contactRoutes);
+// app.use('/api/categorias', authMiddleware, categoryRoutes);
+// app.use('/api/csv', authMiddleware, csvImportRoutes);
 app.use('/api/waha', authMiddleware, wahaRoutes);
-app.use('/api/campaigns', authMiddleware, campaignRoutes);
+// app.use('/api/campaigns', authMiddleware, campaignRoutes); // DESATIVADO TEMPORARIAMENTE
 app.use('/api/users', authMiddleware, usersRoutes);
 app.use('/api/tenants', authMiddleware, tenantRoutes);
 app.use('/api/user-tenants', authMiddleware, userTenantsRoutes);
@@ -137,7 +138,7 @@ app.use('/api/templates', authMiddleware, messageTemplatesRoutes);
 app.use('/api/reports', authMiddleware, reportsRoutes);
 app.use('/api/automation', authMiddleware, automationRoutes);
 app.use('/api/chatwoot', authMiddleware, chatwootRoutes);
-app.use('/api/lead-pages', leadPageRoutes);
+// app.use('/api/lead-pages', leadPageRoutes); // DESATIVADO TEMPORARIAMENTE
 app.use('/api/groups', groupRoutes);
 app.use('/api/media', authMiddleware, mediaRoutes);
 app.use('/api/upload', uploadRoutes);
