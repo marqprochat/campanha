@@ -358,6 +358,40 @@ export const LandingPage = () => {
                             </div>
                         ))}
                     </div>
+
+                    {/* Video Explicativo */}
+                    <div className="mt-20 max-w-4xl mx-auto">
+                        <div className="text-center mb-8">
+                            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-green text-sm font-medium text-[#25D366]">
+                                🎬 Veja na prática
+                            </span>
+                            <h3 className="mt-4 text-2xl md:text-3xl font-bold text-white">
+                                Assista e entenda em <span className="text-[#25D366]">minutos</span>
+                            </h3>
+                        </div>
+                        <div className="relative group">
+                            <div className="absolute -inset-1 rounded-3xl opacity-50 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'linear-gradient(135deg, rgba(37,211,102,0.3), rgba(18,140,126,0.3))' }}></div>
+                            <div className="glass rounded-3xl overflow-hidden glow-green relative" style={{ border: '1px solid rgba(37,211,102,0.2)' }}>
+                                <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+                                    <iframe
+                                        src="https://www.youtube.com/embed/GgunB1Lzpms?rel=0&modestbranding=1"
+                                        title="Como funciona o Influzap - Vídeo Explicativo"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '100%',
+                                            height: '100%',
+                                            border: 'none',
+                                            borderRadius: '1.5rem',
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
